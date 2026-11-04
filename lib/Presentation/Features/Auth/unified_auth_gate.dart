@@ -4,12 +4,15 @@ import 'package:intelli_attend_faculty/Services/faculty_service.dart';
 import 'package:intelli_attend_faculty/Theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intelli_attend_faculty/Services/time_sync_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../Parent/Screens/parent_main_navigation_screen.dart';
+import '../Parent/Screens/parent_permission_onboarding_screen.dart';
 
 /// Boot phase state machine.
 enum _BootPhase {
   initial,
   cacheHit,
+  permissionsOnboarding,
   dashboard,
 }
 
@@ -48,8 +51,15 @@ class _UnifiedAuthGateState extends State<UnifiedAuthGate> {
     } catch (_) {}
     FacultyService.ensureDefaultProfile();
     if (!mounted) return;
-    debugPrint('[Faculty-Boot] Authentication bypassed — rendering Dashboard');
-    setState(() => _phase = _BootPhase.dashboard);
+    final prefs = await SharedPreferences.getInstance();
+    final bool permissionsDone = prefs.getBool('parent_permissions_onboarding_completed') ?? false;
+
+    if (!mounted) return;
+    if (!permissionsDone) {
+      setState(() => _phase = _BootPhase.permissionsOnboarding);
+    } else {
+      setState(() => _phase = _BootPhase.dashboard);
+    }
     try {
       TimeSyncService.bootstrap();
     } catch (_) {}
@@ -57,6 +67,15 @@ class _UnifiedAuthGateState extends State<UnifiedAuthGate> {
 
   @override
   Widget build(BuildContext context) {
+    if (_phase == _BootPhase.permissionsOnboarding) {
+      return ParentPermissionOnboardingScreen(
+        onComplete: () {
+          if (mounted) {
+            setState(() => _phase = _BootPhase.dashboard);
+          }
+        },
+      );
+    }
     if (_phase == _BootPhase.dashboard || _phase == _BootPhase.cacheHit) {
       return const ParentMainNavigationScreen();
     }

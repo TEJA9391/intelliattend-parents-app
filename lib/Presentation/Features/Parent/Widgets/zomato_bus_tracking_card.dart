@@ -479,6 +479,7 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
               ),
             ),
           ),
+        ),
 
           // Zomato Tactile Drag Handle (Centered pill, NO text)
           GestureDetector(

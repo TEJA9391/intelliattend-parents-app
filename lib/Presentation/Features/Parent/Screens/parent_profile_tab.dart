@@ -40,15 +40,18 @@ class ParentProfileTab extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                colors: [Color(0xFF0F766E), Color(0xFF134E4A)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.3)),
+              border: Border.all(
+                color: const Color(0xFF2DD4BF).withValues(alpha: 0.4),
+                width: 1.2,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
+                  color: const Color(0xFF0F766E).withValues(alpha: 0.35),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -97,13 +100,13 @@ class ParentProfileTab extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 32,
-                      backgroundColor: const Color(0xFF2DD4BF).withValues(alpha: 0.2),
+                      backgroundColor: Colors.white.withValues(alpha: 0.18),
                       child: Text(
                         child.name[0],
                         style: const TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF2DD4BF),
+                          color: Colors.white,
                         ),
                       ),
                     ),

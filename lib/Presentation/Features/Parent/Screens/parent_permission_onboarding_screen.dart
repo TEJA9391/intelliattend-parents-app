@@ -61,14 +61,6 @@ class _ParentPermissionOnboardingScreenState
     }
   }
 
-  Future<void> _handleSkip() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('parent_permissions_onboarding_completed', true);
-    if (mounted) {
-      widget.onComplete();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -300,21 +292,6 @@ class _ParentPermissionOnboardingScreenState
                                 Icon(Icons.arrow_forward_rounded, size: 18),
                               ],
                             ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Maybe Later Skip Button
-                  TextButton(
-                    onPressed: _isRequesting ? null : _handleSkip,
-                    child: Text(
-                      'Maybe Later',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textSecondary(context),
-                      ),
                     ),
                   ),
                 ],

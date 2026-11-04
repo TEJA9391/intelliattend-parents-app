@@ -303,36 +303,45 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
 
           
           // 2. THE ZOMATO-STYLE MAP INTERFACE (DRAGGABLE TO SINK OR EXPAND)
-          GestureDetector(
-            onVerticalDragUpdate: _onVerticalDragUpdate,
-            onVerticalDragEnd: _onVerticalDragEnd,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: GestureDetector(
+              onVerticalDragUpdate: _onVerticalDragUpdate,
+              onVerticalDragEnd: _onVerticalDragEnd,
               child: AnimatedContainer(
                 duration: _heightController.isAnimating ? Duration.zero : const Duration(milliseconds: 100),
                 height: _mapHeight,
-                margin: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.08)
+                        ? Colors.white.withValues(alpha: 0.12)
                         : const Color(0xFFCBD5E1),
-                    width: 1,
+                    width: 1.2,
                   ),
-                ),
-                child: Stack(
-                  children: [
-                    // Real Interactive Google Map (Free API)
-                    Positioned.fill(
-                      child: GoogleBusMapWidget(
-                        transit: transit,
-                        isInteractive: true,
-                        showControls: false,
-                        initialZoom: 14.5,
-                        onFullscreenTap: () => _showFullscreenMap(context),
-                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14.8),
+                  clipBehavior: Clip.antiAliasWithSaveLayer,
+                  child: Stack(
+                    children: [
+                      // Real Interactive Google Map (Free API)
+                      Positioned.fill(
+                        child: GoogleBusMapWidget(
+                          transit: transit,
+                          isInteractive: true,
+                          showControls: false,
+                          initialZoom: 14.5,
+                          onFullscreenTap: () => _showFullscreenMap(context),
+                        ),
+                      ),
 
                     // Floating Overlays on Map
                     // Top Left: Speed & Live Status Pill

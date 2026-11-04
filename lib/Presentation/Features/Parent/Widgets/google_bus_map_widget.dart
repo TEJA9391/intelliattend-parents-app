@@ -148,10 +148,12 @@ class _GoogleBusMapWidgetState extends State<GoogleBusMapWidget>
     final startLoc = routePoints.isNotEmpty ? routePoints.first : busLoc;
     final destLoc = routePoints.isNotEmpty ? routePoints.last : busLoc;
 
-    return Stack(
-      children: [
-        // 1. The Interactive Flutter Map Layer (Google Maps Tiles)
-        FlutterMap(
+    return ClipRRect(
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          // 1. The Interactive Flutter Map Layer (Google Maps Tiles)
+          FlutterMap(
           mapController: _mapController,
           options: MapOptions(
             initialCenter: busLoc,
@@ -384,7 +386,8 @@ class _GoogleBusMapWidgetState extends State<GoogleBusMapWidget>
               ],
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 

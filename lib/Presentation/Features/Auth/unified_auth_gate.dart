@@ -1,22 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intelli_attend_faculty/Services/faculty_service.dart';
-import 'package:intelli_attend_faculty/Presentation/Features/Faculty/dashboard_screen.dart';
 import 'package:intelli_attend_faculty/Theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'login_screen.dart';
-import 'Registration/registration_screen.dart';
 import 'package:intelli_attend_faculty/Services/time_sync_service.dart';
+import '../Parent/Screens/parent_main_navigation_screen.dart';
 
-/// Boot phase state machine — matches Student App pattern.
+/// Boot phase state machine.
 enum _BootPhase {
   initial,
   cacheHit,
-  loading,
   dashboard,
-  login,
-  registration,
 }
 
 /// Lightning-fast auth gate — state-based routing like Student App.
@@ -64,9 +58,9 @@ class _UnifiedAuthGateState extends State<UnifiedAuthGate> {
   @override
   Widget build(BuildContext context) {
     if (_phase == _BootPhase.dashboard || _phase == _BootPhase.cacheHit) {
-      return const DashboardScreen();
+      return const ParentMainNavigationScreen();
     }
-    return _buildSplash(statusText: "Starting IntelliAttend Watchman...");
+    return _buildSplash(statusText: "Starting IntelliAttend Parent...");
   }
 
   Widget _buildSplash({required String statusText}) {
@@ -86,7 +80,7 @@ class _UnifiedAuthGateState extends State<UnifiedAuthGate> {
             ),
             const SizedBox(height: 32),
             Text(
-              "IntelliAttend Watchman",
+              "IntelliAttend Parent",
               style: GoogleFonts.inter(
                 color: isDark ? Colors.white : const Color(0xFF0F172A),
                 fontSize: 28,

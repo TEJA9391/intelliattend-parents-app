@@ -1,5 +1,5 @@
 name: intelli_attend_faculty
-description: IntelliAttend-Faculty Mobile App - Professional attendance management for faculty.
+description: IntelliAttend Parent Mobile App - Real-time campus attendance, safety tracking, and parent portal.
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -54,6 +54,8 @@ dependencies:
   audioplayers: ^6.0.0
   video_player: ^2.9.0
   camera: ^0.11.0+2
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
 
 dev_dependencies:
   flutter_test:

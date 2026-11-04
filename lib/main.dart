@@ -30,6 +30,7 @@ import 'package:intelli_attend_faculty/Services/sync_fcm_handler.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Auth/unified_auth_gate.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/messaging_router.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/incoming_call_overlay.dart';
+import 'package:intelli_attend_faculty/Presentation/Features/Parent/Screens/parent_main_navigation_screen.dart';
 
 bool isFirebaseInitialized = false;
 
@@ -45,11 +46,11 @@ void main() {
   ]);
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    systemNavigationBarColor: Color(0xFF16161A),
+    systemNavigationBarColor: Colors.white,
     systemNavigationBarDividerColor: Colors.transparent,
-    systemNavigationBarIconBrightness: Brightness.light,
+    systemNavigationBarIconBrightness: Brightness.dark,
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
+    statusBarIconBrightness: Brightness.dark,
   ));
 
   // ── Track A: Ultra-fast persistence path (~100ms) ─────────────────────
@@ -217,13 +218,15 @@ class IntelliAttendMaterialApp extends StatelessWidget {
       valueListenable: ThemeController.themeMode,
       builder: (context, currentMode, _) {
         return MaterialApp(
-          title: 'IntelliAttend Watchman',
+          title: 'IntelliAttend Parent',
           navigatorKey: IntelliAttendApp.navigatorKey,
           debugShowCheckedModeBanner: false,
           themeMode: currentMode,
           theme: AppTheme.getTheme(Brightness.light),
           darkTheme: AppTheme.getTheme(Brightness.dark),
           routes: {
+            '/parent': (context) => const ParentMainNavigationScreen(),
+            '/watchman': (context) => const DashboardScreen(),
             '/login': (context) => const DashboardScreen(),
           },
           home: UnifiedAuthGate(persistenceFuture: persistenceFuture, firebaseReady: firebaseReady),

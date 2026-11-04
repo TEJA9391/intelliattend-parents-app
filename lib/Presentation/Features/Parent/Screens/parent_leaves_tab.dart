@@ -191,7 +191,7 @@ class _ParentLeavesTabState extends State<ParentLeavesTab> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.comment_rounded, size: 14, color: Color(0xFF6B4EFF)),
+                      const Icon(Icons.comment_rounded, size: 14, color: Color(0xFF2DD4BF)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(

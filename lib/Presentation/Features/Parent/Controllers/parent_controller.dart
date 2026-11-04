@@ -1,11 +1,15 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../../../Services/notification_service.dart';
 import '../Models/parent_models.dart';
 
 class ParentController extends ChangeNotifier {
   ParentController() {
     _initMockData();
+    if (_childTransits.values.any((t) => t.isOnBus)) {
+      _startTransitTimer();
+    }
   }
 
   bool _isLoading = false;
@@ -95,6 +99,14 @@ class ParentController extends ChangeNotifier {
 
     _startTransitTimer();
     notifyListeners();
+
+    // Trigger instant system push alert to parent
+    final child = _children.firstWhere((c) => c.id == childId, orElse: () => _children.first);
+    NotificationService().showNotification(
+      id: childId.hashCode,
+      title: '🚌 Bus Boarded Alert',
+      body: '${child.name} has tapped their RFID card and boarded ${existing.busNumber}. Live tracking is active.',
+    );
   }
 
   /// Called when student taps RFID on the physical reader device on the bus to exit / deboard
@@ -121,6 +133,15 @@ class ParentController extends ChangeNotifier {
     }
 
     notifyListeners();
+
+    // Trigger arrival / deboard alert to parent
+    final child = _children.firstWhere((c) => c.id == childId, orElse: () => _children.first);
+    final placeName = existing.destinationType == TransitDestinationType.school ? 'Campus' : 'Home';
+    NotificationService().showNotification(
+      id: childId.hashCode + 1,
+      title: '🏡 Safely Arrived at $placeName',
+      body: '${child.name} has safely reached $placeName (${existing.destinationCampus}). Live location tracking exited.',
+    );
   }
 
   void toggleBusTransit(String childId) {
@@ -152,8 +173,15 @@ class ParentController extends ChangeNotifier {
       for (final childId in _childTransits.keys) {
         final current = _childTransits[childId];
         if (current != null && current.isOnBus) {
-          // If already reached destination, keep stopped at destination until RFID deboard tap
+          // If already reached destination, automatically exit live tracking
           if (current.isReached) {
+            final targetChildId = childId;
+            Timer(const Duration(milliseconds: 1500), () {
+              final active = _childTransits[targetChildId];
+              if (active != null && active.isOnBus) {
+                tapRfidDeboardBus(targetChildId);
+              }
+            });
             continue;
           }
 
@@ -171,7 +199,7 @@ class ParentController extends ChangeNotifier {
           final curLng = startLng + (destLng - startLng) * newProgress;
 
           if (newProgress >= 0.98) {
-            // REACHED DESTINATION! Bus stops at gate/home, waiting for RFID deboard tap
+            // REACHED DESTINATION! Bus arrives at campus or home
             final reachedStage = current.destinationType == TransitDestinationType.school
                 ? TransitStage.reachedSchool
                 : TransitStage.reachedHome;
@@ -188,6 +216,15 @@ class ParentController extends ChangeNotifier {
               stops: current.stops.map((s) => s.copyWith(isCompleted: true, isNext: false)).toList(),
             );
             anyUpdated = true;
+
+            // Automatically exit location tracking and return to dashboard after arriving
+            final targetChildId = childId;
+            Timer(const Duration(milliseconds: 2000), () {
+              final active = _childTransits[targetChildId];
+              if (active != null && active.isOnBus) {
+                tapRfidDeboardBus(targetChildId);
+              }
+            });
           } else {
             final estMins = ((1.0 - newProgress) * 15).ceil().clamp(1, 20);
             final remKm = double.parse(((1.0 - newProgress) * 5.2).clamp(0.1, 5.2).toStringAsFixed(1));

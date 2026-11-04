@@ -18,11 +18,11 @@ class AppTheme {
   static const Color darkOutlineVariant = Color(0xFF333333);
 
   // Light Theme Tokens (as defined in HTML)
-  static const Color lightBackground = Color(0xFFF8FAFC);
+  static const Color lightBackground = Color(0xFFFFFFFF);
   static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightSurfaceSubtle = Color(0xFFF1F5F9);
+  static const Color lightSurfaceSubtle = Color(0xFFF8FAFC);
   static const Color lightOnBackground = Color(0xFF0F172A);
-  static const Color lightSurfaceVariant = Color(0xFFF1F5F9);
+  static const Color lightSurfaceVariant = Color(0xFFF8FAFC);
   static const Color lightOutlineVariant = Color(0xFFE2E8F0);
 
   // Theme-aware color methods

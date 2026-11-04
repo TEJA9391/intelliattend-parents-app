@@ -167,7 +167,7 @@ class _ParentDashboardTabState extends State<ParentDashboardTab> {
                       context,
                       icon: Icons.support_agent_rounded,
                       label: 'Call Mentor',
-                      color: const Color(0xFF6B4EFF),
+                      color: const Color(0xFF0D9488),
                       onTap: () => widget.onTabChange(3),
                     ),
                     const SizedBox(width: 8),

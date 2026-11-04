@@ -685,7 +685,7 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.nfc_rounded,
+                          transit.isReached ? Icons.check_circle_rounded : Icons.logout_rounded,
                           size: transit.isReached ? 18 : 14,
                           color: transit.isReached ? Colors.white : const Color(0xFF94A3B8),
                         ),
@@ -693,8 +693,8 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
                         Flexible(
                           child: Text(
                             transit.isReached
-                                ? 'Tap Pass on Bus to Exit & Stop Map'
-                                : 'Student Deboarded? Tap Pass to Exit',
+                                ? 'Arrived at ${transit.destinationTitle} • Auto-exiting...'
+                                : 'Exit Live Map View',
                             style: TextStyle(
                               fontSize: transit.isReached ? 12 : 11,
                               fontWeight: transit.isReached ? FontWeight.bold : FontWeight.w600,

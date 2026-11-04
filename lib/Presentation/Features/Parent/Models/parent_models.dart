@@ -242,7 +242,7 @@ class CampusNotice {
       case NoticeCategory.academic:
         return const Color(0xFF38BDF8);
       case NoticeCategory.exam:
-        return const Color(0xFFA855F7);
+        return const Color(0xFFF43F5E);
       case NoticeCategory.holiday:
         return const Color(0xFF34D399);
       case NoticeCategory.event:

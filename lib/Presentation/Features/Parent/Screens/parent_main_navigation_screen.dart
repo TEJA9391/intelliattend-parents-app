@@ -40,7 +40,7 @@ class _ParentMainNavigationScreenState extends State<ParentMainNavigationScreen>
   void _applySystemNavOverlay() {
     if (!mounted) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final navColor = isDark ? const Color(0xFF0B111A) : Colors.white;
+    final navColor = isDark ? const Color(0xFF101012) : Colors.white;
 
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -55,7 +55,7 @@ class _ParentMainNavigationScreenState extends State<ParentMainNavigationScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final navColor = isDark ? const Color(0xFF0B111A) : Colors.white;
+    final navColor = isDark ? const Color(0xFF101012) : Colors.white;
 
     final overlayStyle = SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -102,16 +102,16 @@ class _ParentMainNavigationScreenState extends State<ParentMainNavigationScreen>
 
     final activeColor = isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0F766E);
     final activeBg = isDark
-        ? const Color(0xFF2DD4BF).withValues(alpha: 0.18)
+        ? const Color(0xFF2DD4BF).withValues(alpha: 0.14)
         : const Color(0xFF0F766E).withValues(alpha: 0.12);
-    final inactiveColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final inactiveColor = isDark ? const Color(0xFF9E9E9E) : const Color(0xFF71717A);
 
     return Container(
       decoration: BoxDecoration(
         color: navColor,
         border: Border(
           top: BorderSide(
-            color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
+            color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF1F5F9),
             width: 1,
           ),
         ),

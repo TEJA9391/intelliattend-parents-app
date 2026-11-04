@@ -115,7 +115,7 @@ class GuardianPortalSheet extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      'RS',
+                      _getInitials(controller.parentName),
                       style: GoogleFonts.inter(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
@@ -134,7 +134,7 @@ class GuardianPortalSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Mr. & Mrs. Sharma',
+                      controller.parentName,
                       style: GoogleFonts.inter(
                         fontSize: 18.5,
                         fontWeight: FontWeight.w700,
@@ -146,7 +146,7 @@ class GuardianPortalSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'rajesh.sharma@example.com',
+                      '${controller.parentName.toLowerCase().replaceAll(RegExp(r'\s+'), '.')}.parent@intelliattend.app',
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
@@ -272,5 +272,12 @@ class GuardianPortalSheet extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _getInitials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return 'P';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts.last[0]).toUpperCase();
   }
 }

@@ -1,15 +1,53 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../Services/notification_service.dart';
 import '../Models/parent_models.dart';
 
 class ParentController extends ChangeNotifier {
   ParentController() {
     _initMockData();
+    _loadSavedParentName();
     if (_childTransits.values.any((t) => t.isOnBus)) {
       _startTransitTimer();
     }
+  }
+
+  String _parentName = 'Mr. & Mrs. Sharma';
+  String get parentName => _parentName;
+
+  void setParentName(String name, {bool save = true}) {
+    final clean = name.trim();
+    if (clean.isEmpty) return;
+    _parentName = clean;
+
+    final parts = clean.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.length >= 2) {
+      final surname = parts.last;
+      for (int i = 0; i < _children.length; i++) {
+        final current = _children[i];
+        final childFirst = i == 0 ? 'Aarav' : 'Ananya';
+        _children[i] = current.copyWith(name: '$childFirst $surname');
+      }
+    }
+
+    if (save) {
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setString('parent_full_name', clean);
+      });
+    }
+    notifyListeners();
+  }
+
+  Future<void> _loadSavedParentName() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('parent_full_name');
+      if (saved != null && saved.trim().isNotEmpty) {
+        setParentName(saved, save: false);
+      }
+    } catch (_) {}
   }
 
   bool _isLoading = false;

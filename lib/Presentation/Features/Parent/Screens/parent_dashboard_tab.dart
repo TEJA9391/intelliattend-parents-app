@@ -338,7 +338,7 @@ class _ParentDashboardTabState extends State<ParentDashboardTab> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Mr. & Mrs. Sharma',
+                                controller.parentName,
                                 style: GoogleFonts.inter(
                                   color: AppTheme.text(context),
                                   fontSize: 18,

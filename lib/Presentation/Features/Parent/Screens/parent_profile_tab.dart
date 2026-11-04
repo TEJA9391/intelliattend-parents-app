@@ -4,6 +4,7 @@ import '../../../../Theme/app_theme.dart';
 import '../../../../Theme/theme_controller.dart';
 import '../Controllers/parent_controller.dart';
 import '../Widgets/child_switcher_bar.dart';
+import 'parent_name_verification_screen.dart';
 
 class ParentProfileTab extends StatelessWidget {
   const ParentProfileTab({super.key});
@@ -194,7 +195,31 @@ class ParentProfileTab extends StatelessWidget {
             ),
             child: Column(
               children: [
-                _buildInfoRow(context, icon: Icons.person_outline_rounded, label: 'Parent Name', value: 'Mr. & Mrs. Sharma'),
+                _buildInfoRow(
+                  context,
+                  icon: Icons.person_outline_rounded,
+                  label: 'Parent Name',
+                  value: controller.parentName,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ParentNameVerificationScreen(
+                          initialName: controller.parentName,
+                          onVerified: (newName) {
+                            controller.setParentName(newName);
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Parent verified as $newName'),
+                                backgroundColor: const Color(0xFF0F766E),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
                 const Divider(height: 16),
                 _buildInfoRow(context, icon: Icons.phone_outlined, label: 'Primary Contact', value: '+91 98765 43210'),
                 const Divider(height: 16),
@@ -322,8 +347,9 @@ class ParentProfileTab extends StatelessWidget {
     required IconData icon,
     required String label,
     required String value,
+    VoidCallback? onTap,
   }) {
-    return Row(
+    final row = Row(
       children: [
         Icon(icon, size: 18, color: const Color(0xFF2DD4BF)),
         const SizedBox(width: 12),
@@ -342,8 +368,24 @@ class ParentProfileTab extends StatelessWidget {
             ),
           ),
         ),
+        if (onTap != null) ...[
+          const SizedBox(width: 6),
+          Icon(Icons.edit_outlined, size: 14, color: AppTheme.textSecondary(context)),
+        ],
       ],
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: row,
+        ),
+      );
+    }
+    return row;
   }
 
   Widget _buildEmergencyItem(

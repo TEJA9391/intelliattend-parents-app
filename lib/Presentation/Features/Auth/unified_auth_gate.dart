@@ -7,21 +7,18 @@ import 'package:intelli_attend_faculty/Services/time_sync_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Parent/Screens/parent_main_navigation_screen.dart';
 import '../Parent/Screens/parent_permission_onboarding_screen.dart';
+import '../Parent/Screens/parent_name_verification_screen.dart';
 
 /// Boot phase state machine.
 enum _BootPhase {
   initial,
   cacheHit,
   permissionsOnboarding,
+  parentNameVerification,
   dashboard,
 }
 
 /// Lightning-fast auth gate — state-based routing like Student App.
-///
-/// Pattern:
-///   1. Await Hive persistence (~100ms)
-///   2. If profile cached → cacheHit → render DashboardScreen directly
-///   3. Firebase runs in background, not blocking UI
 class UnifiedAuthGate extends StatefulWidget {
   final Future<void> persistenceFuture;
   final Future<void> firebaseReady;
@@ -38,6 +35,7 @@ class UnifiedAuthGate extends StatefulWidget {
 
 class _UnifiedAuthGateState extends State<UnifiedAuthGate> {
   _BootPhase _phase = _BootPhase.initial;
+  String? _verifiedParentName;
 
   @override
   void initState() {
@@ -52,11 +50,19 @@ class _UnifiedAuthGateState extends State<UnifiedAuthGate> {
     FacultyService.ensureDefaultProfile();
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
-    final bool permissionsDone = prefs.getBool('parent_permissions_onboarding_completed') ?? false;
+    final bool permissionsDone =
+        prefs.getBool('parent_permissions_onboarding_completed') ?? false;
+    final bool identityVerified =
+        prefs.getBool('parent_identity_verified') ?? false;
+    _verifiedParentName = prefs.getString('parent_full_name');
 
     if (!mounted) return;
     if (!permissionsDone) {
       setState(() => _phase = _BootPhase.permissionsOnboarding);
+    } else if (!identityVerified ||
+        _verifiedParentName == null ||
+        _verifiedParentName!.trim().isEmpty) {
+      setState(() => _phase = _BootPhase.parentNameVerification);
     } else {
       setState(() => _phase = _BootPhase.dashboard);
     }
@@ -71,13 +77,26 @@ class _UnifiedAuthGateState extends State<UnifiedAuthGate> {
       return ParentPermissionOnboardingScreen(
         onComplete: () {
           if (mounted) {
-            setState(() => _phase = _BootPhase.dashboard);
+            setState(() => _phase = _BootPhase.parentNameVerification);
+          }
+        },
+      );
+    }
+    if (_phase == _BootPhase.parentNameVerification) {
+      return ParentNameVerificationScreen(
+        initialName: _verifiedParentName,
+        onVerified: (parentName) {
+          if (mounted) {
+            setState(() {
+              _verifiedParentName = parentName;
+              _phase = _BootPhase.dashboard;
+            });
           }
         },
       );
     }
     if (_phase == _BootPhase.dashboard || _phase == _BootPhase.cacheHit) {
-      return const ParentMainNavigationScreen();
+      return ParentMainNavigationScreen(initialParentName: _verifiedParentName);
     }
     return _buildSplash(statusText: "Starting IntelliAttend Parent...");
   }

@@ -28,6 +28,34 @@ class ChildProfile {
     this.academicYear = '2026 - 2027',
   });
 
+  ChildProfile copyWith({
+    String? id,
+    String? name,
+    String? rollNumber,
+    String? program,
+    String? semester,
+    String? avatarUrl,
+    String? bloodGroup,
+    String? mentorName,
+    String? mentorPhone,
+    double? overallAttendance,
+    String? academicYear,
+  }) {
+    return ChildProfile(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      rollNumber: rollNumber ?? this.rollNumber,
+      program: program ?? this.program,
+      semester: semester ?? this.semester,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      bloodGroup: bloodGroup ?? this.bloodGroup,
+      mentorName: mentorName ?? this.mentorName,
+      mentorPhone: mentorPhone ?? this.mentorPhone,
+      overallAttendance: overallAttendance ?? this.overallAttendance,
+      academicYear: academicYear ?? this.academicYear,
+    );
+  }
+
   Color get attendanceColor {
     if (overallAttendance >= 75.0) {
       return const Color(0xFF2DD4BF); // Teal Green
@@ -408,13 +436,13 @@ class StudentBusTransit {
         [12.9080, 77.6480],
         [12.9176, 77.6238],
         [12.8750, 77.6410],
-        [12.8510, 77.6620],
+        [12.8550, 77.6530],
         [12.8452, 77.6602],
       ];
     } else {
       return const [
         [12.8452, 77.6602],
-        [12.8510, 77.6620],
+        [12.8550, 77.6530],
         [12.8750, 77.6410],
         [12.9176, 77.6238],
         [12.9080, 77.6480],

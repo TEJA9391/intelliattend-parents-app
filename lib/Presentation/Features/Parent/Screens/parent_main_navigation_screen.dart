@@ -10,7 +10,8 @@ import 'parent_notices_faculty_tab.dart';
 import 'parent_profile_tab.dart';
 
 class ParentMainNavigationScreen extends StatefulWidget {
-  const ParentMainNavigationScreen({super.key});
+  final String? initialParentName;
+  const ParentMainNavigationScreen({super.key, this.initialParentName});
 
   @override
   State<ParentMainNavigationScreen> createState() => _ParentMainNavigationScreenState();
@@ -72,7 +73,14 @@ class _ParentMainNavigationScreenState extends State<ParentMainNavigationScreen>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlayStyle,
       child: ChangeNotifierProvider(
-        create: (_) => ParentController(),
+        create: (_) {
+          final c = ParentController();
+          if (widget.initialParentName != null &&
+              widget.initialParentName!.trim().isNotEmpty) {
+            c.setParentName(widget.initialParentName!);
+          }
+          return c;
+        },
         child: Scaffold(
           backgroundColor: AppTheme.bg(context),
           body: IndexedStack(

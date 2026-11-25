@@ -9,7 +9,6 @@ import 'package:intelli_attend_faculty/Services/haptic_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -21,6 +20,7 @@ import 'package:intelli_attend_faculty/Data/Services/message_cache_service.dart'
 import 'package:intelli_attend_faculty/Theme/app_theme.dart';
 import 'package:intelli_attend_faculty/Services/chat_realtime_service.dart';
 import 'package:intelli_attend_faculty/Services/notification_service.dart';
+import 'package:intelli_attend_faculty/Services/permission_service.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/chat_screen_controller.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/forward_screen.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/thread_screen.dart';
@@ -568,10 +568,8 @@ class _ChatScreenState extends State<ChatScreen> {
                    PopupMenuItem(value: 'documents', child: Text('Documents', style: TextStyle(color: AppTheme.text(context)))),
                    PopupMenuItem(value: 'links', child: Text('Links', style: TextStyle(color: AppTheme.text(context)))),
                    PopupMenuItem(value: 'export', child: Text('Export Chat', style: TextStyle(color: AppTheme.text(context)))),
-                   PopupMenuItem(value: 'mute', child: Text('Mute', style: TextStyle(color: AppTheme.text(context)))),
                    PopupMenuItem(value: 'clear', child: Text('Clear Chat', style: TextStyle(color: AppTheme.text(context)))),
                    PopupMenuItem(value: 'delete', child: const Text('Delete Conversation', style: TextStyle(color: Color(0xFFEF4444)))),
-                   PopupMenuItem(value: 'block', child: const Text('Block Student', style: TextStyle(color: Color(0xFFEF4444)))),
                    PopupMenuItem(value: 'report', child: const Text('Report', style: TextStyle(color: Color(0xFFEF4444)))),
                 ],
               ),
@@ -581,26 +579,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _startCall(BuildContext context, CallType type) async {
     if (type == CallType.video) {
-      final camera = await Permission.camera.request();
-      if (!camera.isGranted) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Camera permission is required for video calls')),
-          );
-        }
-        return;
-      }
-    }
-    final mic = await Permission.microphone.request();
-    if (!mic.isGranted) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Microphone permission is required for calls')),
-        );
-      }
-      return;
+      final cameraAllowed = await PermissionService().ensureFeaturePermission(
+        context,
+        AppPermissionType.camera,
+        featureName: 'video calls',
+      );
+      if (!cameraAllowed) return;
     }
     if (!context.mounted) return;
+    final micAllowed = await PermissionService().ensureFeaturePermission(
+      context,
+      AppPermissionType.microphone,
+      featureName: 'calls',
+    );
+    if (!micAllowed || !context.mounted) return;
     HapticService.medium();
     Navigator.of(context).push(
       MaterialPageRoute(

@@ -5,9 +5,9 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intelli_attend_faculty/Services/haptic_service.dart';
+import 'package:intelli_attend_faculty/Services/permission_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'package:intelli_attend_faculty/Data/Models/Messaging/messaging_models.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/Widgets/attachment_preview_sheet.dart';
@@ -133,51 +133,14 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   Future<void> _beginVoice() async {
     if (_voice.isRecording || _voice.isPreviewing) return;
-    final status = await Permission.microphone.request();
-    if (!status.isGranted) {
-      if (mounted) {
-        if (status.isPermanentlyDenied) {
-          await _showMicSettingsDialog();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Microphone permission is required for voice messages')),
-          );
-        }
-      }
-      return;
-    }
+    final allowed = await PermissionService().ensureFeaturePermission(
+      context,
+      AppPermissionType.microphone,
+      featureName: 'voice messages',
+    );
+    if (!allowed || !mounted) return;
     HapticService.medium();
     await _voice.startRecording();
-  }
-
-  Future<void> _showMicSettingsDialog() {
-    return showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.card(ctx),
-        title: Text('Microphone permission denied',
-            style: GoogleFonts.inter(
-                color: AppTheme.text(ctx), fontSize: 16, fontWeight: FontWeight.w800)),
-        content: Text(
-          'The microphone permission was permanently denied. Enable it in system settings to record voice messages.',
-          style: GoogleFonts.inter(color: AppTheme.textSecondary(ctx), fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Not now', style: TextStyle(color: AppTheme.textSecondary(ctx))),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              openAppSettings();
-            },
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.primary(context)),
-            child: const Text('Open Settings'),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _micControl(BuildContext context) {
@@ -212,15 +175,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   Future<void> _openCamera() async {
     HapticService.light();
-    final status = await Permission.camera.request();
-    if (!status.isGranted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Camera permission is required for attachments')),
-        );
-      }
-      return;
-    }
+    final allowed = await PermissionService().ensureFeaturePermission(
+      context,
+      AppPermissionType.camera,
+      featureName: 'camera attachments',
+    );
+    if (!allowed || !mounted) return;
     final picker = ImagePicker();
     final result = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
     if (result == null || !mounted) return;

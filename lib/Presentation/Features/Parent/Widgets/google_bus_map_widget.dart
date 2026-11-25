@@ -182,7 +182,7 @@ class _GoogleBusMapWidgetState extends State<GoogleBusMapWidget>
                 polylines: [
                   Polyline(
                     points: routePoints,
-                    color: const Color(0xFF0F766E).withValues(alpha: 0.35),
+                    color: const Color(0xFF2DD4BF).withValues(alpha: 0.35),
                     strokeWidth: 8.0,
                   ),
                 ],
@@ -192,7 +192,7 @@ class _GoogleBusMapWidgetState extends State<GoogleBusMapWidget>
                 polylines: [
                   Polyline(
                     points: routePoints,
-                    color: const Color(0xFF0F766E),
+                    color: const Color(0xFF2DD4BF),
                     strokeWidth: 4.5,
                   ),
                 ],
@@ -230,14 +230,14 @@ class _GoogleBusMapWidgetState extends State<GoogleBusMapWidget>
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: const LinearGradient(
-                                colors: [Color(0xFF0F766E), Color(0xFF14B8A6)],
+                                colors: [Color(0xFF14B8A6), Color(0xFF2DD4BF)],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               border: Border.all(color: Colors.white, width: 2.5),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF0F766E).withValues(alpha: 0.5),
+                                  color: const Color(0xFF2DD4BF).withValues(alpha: 0.5),
                                   blurRadius: 10,
                                   offset: const Offset(0, 3),
                                 ),
@@ -328,7 +328,7 @@ class _GoogleBusMapWidgetState extends State<GoogleBusMapWidget>
                 // Zoom controls group
                 Container(
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                    color: isDark ? const Color(0xFF121212) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFCBD5E1),
@@ -408,8 +408,8 @@ class _GoogleBusMapWidgetState extends State<GoogleBusMapWidget>
           height: 36,
           decoration: BoxDecoration(
             color: isPrimary
-                ? const Color(0xFF0F766E)
-                : (isDark ? const Color(0xFF0F172A) : Colors.white),
+                ? const Color(0xFF2DD4BF)
+                : (isDark ? const Color(0xFF121212) : Colors.white),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isPrimary
@@ -429,8 +429,8 @@ class _GoogleBusMapWidgetState extends State<GoogleBusMapWidget>
             icon,
             size: 19,
             color: isPrimary
-                ? Colors.white
-                : (isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0F766E)),
+                ? Colors.black
+                : const Color(0xFF2DD4BF),
           ),
         ),
       ),

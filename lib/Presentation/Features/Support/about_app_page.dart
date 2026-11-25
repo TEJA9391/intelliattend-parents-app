@@ -1,211 +1,353 @@
 import 'package:flutter/material.dart';
-import 'package:intelli_attend_faculty/Theme/app_theme.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../Theme/app_theme.dart';
+import '../../Widgets/app_snack_bar.dart';
 
 class AboutAppPage extends StatelessWidget {
   const AboutAppPage({Key? key}) : super(key: key);
 
+  Future<void> _launchUrl(BuildContext context, String url) async {
+    HapticFeedback.lightImpact();
+    final uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          AppSnackBar.showError(context, 'Could not open link: $url');
+        }
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppSnackBar.showError(context, 'Could not open link');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppTheme.text(context)),
-          onPressed: () => Navigator.pop(context),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppTheme.text(context),
+            size: 20,
+          ),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            Navigator.pop(context);
+          },
         ),
         title: Text(
           "About IntelliAttend",
           style: TextStyle(
             color: AppTheme.text(context),
             fontWeight: FontWeight.bold,
-            fontSize: 20,
+            fontSize: 18,
           ),
         ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // App Logo Placeholder
+            const SizedBox(height: 10),
+
+            // 1. App Logo Container (Matching user image squircle with soft shadow)
             Container(
-              width: 120,
-              height: 120,
+              width: 96,
+              height: 96,
               decoration: BoxDecoration(
-                color: AppTheme.primary(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(32),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                  width: 1.2,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primary(context).withValues(alpha: 0.2),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.5)
+                        : Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
-              child: Icon(
-                Icons.school_rounded,
-                size: 64,
-                color: AppTheme.primary(context),
+              padding: const EdgeInsets.all(16),
+              child: Image.asset(
+                'assets/images/logo_square.png',
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.school_rounded,
+                  size: 48,
+                  color: Color(0xFF2DD4BF),
+                ),
               ),
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 20),
+
+            // 2. Title: IntelliAttend Parent
             Text(
-              "IntelliAttend Watchman",
+              "IntelliAttend Parent",
               style: TextStyle(
                 color: AppTheme.text(context),
-                fontSize: 26,
+                fontSize: 24,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -0.5,
               ),
             ),
+
             const SizedBox(height: 8),
-            Text(
-              "Version 2.4.0 (Build 108)",
-              style: TextStyle(
-                color: AppTheme.slate500(context),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+
+            // 3. Version Pill
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Text(
+                "Version 2.4.0 (Build 140)",
+                style: TextStyle(
+                  color: AppTheme.textSecondary(context),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
               ),
             ),
-            const SizedBox(height: 48),
-            _buildSection(
-              context,
-              "Our Mission",
-              "IntelliAttend is dedicated to revolutionizing academic attendance through intelligent automation and real-time analytics. We empower educators with seamless tools to focus on what matters most: teaching.",
-            ),
-            const SizedBox(height: 32),
-            _buildInfoCard(context),
-            const SizedBox(height: 48),
-            Text(
-              "© 2026 IntelliAttend Technologies",
-              style: TextStyle(
-                color: AppTheme.slate500(context),
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+
+            const SizedBox(height: 28),
+
+            // 4. OVERVIEW Card (Exact layout matching user's image)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.card(context),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : const Color(0xFFE2E8F0),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "OVERVIEW",
+                    style: TextStyle(
+                      color: AppTheme.textSecondary(context).withValues(alpha: 0.6),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Stay connected with your ward's campus journey — real-time attendance, live bus tracking, and direct faculty communication in one unified app.",
+                    style: TextStyle(
+                      color: AppTheme.text(context),
+                      fontSize: 13.5,
+                      height: 1.55,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
+
+            const SizedBox(height: 16),
+
+            // 5. Links Card (Matching user image list with ↗ chevrons)
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppTheme.card(context),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : const Color(0xFFE2E8F0),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  _buildLinkRow(
+                    context,
+                    icon: Icons.language_rounded,
+                    title: "Official Portal",
+                    subtitle: "Intelliattend.com ↗",
+                    onTap: () => _launchUrl(context, "https://www.intelliattend.com/"),
+                    isTop: true,
+                  ),
+                  Divider(
+                    height: 1,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                  _buildLinkRow(
+                    context,
+                    icon: Icons.lock_outline_rounded,
+                    title: "Privacy Policy",
+                    subtitle: "Legal ↗",
+                    onTap: () =>
+                        _launchUrl(context, "https://www.intelliattend.com/legal"),
+                  ),
+                  Divider(
+                    height: 1,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                  _buildLinkRow(
+                    context,
+                    icon: Icons.article_outlined,
+                    title: "Terms of Service",
+                    subtitle: "Agreement ↗",
+                    onTap: () =>
+                        _launchUrl(context, "https://www.intelliattend.com/terms"),
+                  ),
+                  Divider(
+                    height: 1,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                  _buildLinkRow(
+                    context,
+                    icon: Icons.support_agent_rounded,
+                    title: "Parent Support",
+                    subtitle: "Email Support ↗",
+                    onTap: () => _launchUrl(
+                      context,
+                      "mailto:support@intelliattend.com?subject=Parent%20Portal%20Inquiry",
+                    ),
+                    isBottom: true,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 36),
+
+            // Footer
             Text(
-              "Made with ❤️ for Educators Worldwide",
+              "INTELLIATTEND PARENT PORTAL",
               style: TextStyle(
-                color: AppTheme.slate500(context).withValues(alpha: 0.6),
+                color: AppTheme.textSecondary(context).withValues(alpha: 0.5),
                 fontSize: 11,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 2,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 6),
+            Text(
+              "© 2026 IntelliAttend Technologies.\nAll Rights Reserved.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppTheme.textSecondary(context).withValues(alpha: 0.35),
+                fontSize: 10,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSection(BuildContext context, String title, String content) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: AppTheme.primary(context),
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
-            textBaseline: TextBaseline.alphabetic,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          content,
-          maxLines: 5,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppTheme.textSecondary(context),
-            fontSize: 15,
-            height: 1.6,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _buildLinkRow(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool isTop = false,
+    bool isBottom = false,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-  Widget _buildInfoCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.border(context), width: 1),
-      ),
-      child: Column(
-        children: [
-          _buildInfoRow(context, Icons.language_rounded, "Official Website",
-              "www.intelliattend.com", () => _launchUrl(context, "https://www.intelliattend.app/")),
-          const Divider(height: 32),
-          _buildInfoRow(context, Icons.privacy_tip_outlined, "Privacy Policy",
-              "View Document", () => _launchUrl(context, "https://www.intelliattend.app/privacy/")),
-          const Divider(height: 32),
-          _buildInfoRow(context, Icons.description_outlined, "Terms of Service",
-              "View Document", () => _launchUrl(context, "https://www.intelliattend.app/terms/")),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _launchUrl(BuildContext context, String url) async {
-    final uri = Uri.parse(url);
-    try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Could not open link")),
-        );
-      }
-    }
-  }
-
-  Widget _buildInfoRow(
-      BuildContext context, IconData icon, String title, String value, VoidCallback? onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.vertical(
+        top: isTop ? const Radius.circular(20) : Radius.zero,
+        bottom: isBottom ? const Radius.circular(20) : Radius.zero,
+      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         child: Row(
           children: [
-            Icon(icon, color: AppTheme.primary(context), size: 20),
-            const SizedBox(width: 16),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                size: 18,
+                color: const Color(0xFF2DD4BF),
+              ),
+            ),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: AppTheme.text(context),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
             Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              subtitle,
               style: TextStyle(
-                color: AppTheme.primary(context),
+                color: AppTheme.textSecondary(context),
                 fontSize: 13,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right_rounded,
-                color: AppTheme.slate500(context), size: 16),
           ],
         ),
       ),

@@ -49,5 +49,13 @@
 		<true/>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>IntelliAttend Parent needs location access to show live school bus proximity and pickup stop distance on the route map.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>IntelliAttend Parent uses the camera to update your ward's Digital ID photo, scan campus QR codes, and join teacher video calls or attach photos in chat.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>IntelliAttend Parent uses the microphone for audio/video calls with teachers and sending voice notes in parent-teacher chat.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>IntelliAttend Parent accesses photos and media to upload student ID photos, attach files in chat, and save downloaded receipts.</string>
 	</dict>
 </plist>

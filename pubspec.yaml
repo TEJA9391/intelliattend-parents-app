@@ -2,7 +2,7 @@ name: intelli_attend_faculty
 description: IntelliAttend Parent Mobile App - Real-time campus attendance, safety tracking, and parent portal.
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 2.4.0+140
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

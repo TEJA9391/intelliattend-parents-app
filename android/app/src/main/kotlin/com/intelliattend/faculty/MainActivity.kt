@@ -22,11 +22,34 @@ import java.util.Base64
 
 class MainActivity : FlutterFragmentActivity() {
     private val CHANNEL = "com.intelliattend.faculty/hardware"
+    private val DEEPLINK_CHANNEL = "com.intelliattend.parent/deeplink"
     private lateinit var hardwareProvider: HardwareProvider
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var deeplinkChannel: MethodChannel? = null
+    private var pendingInitialLink: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingInitialLink = intent?.dataString
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+            window.isStatusBarContrastEnforced = false
+        }
+        window.navigationBarColor = android.graphics.Color.WHITE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or 
+                android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val uri = intent.dataString
+        if (uri != null) {
+            deeplinkChannel?.invokeMethod("onDeepLink", uri)
+        }
     }
 
     override fun onDestroy() {
@@ -38,6 +61,16 @@ class MainActivity : FlutterFragmentActivity() {
         super.configureFlutterEngine(flutterEngine)
         
         hardwareProvider = HardwareProvider(applicationContext)
+        deeplinkChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEEPLINK_CHANNEL).apply {
+            setMethodCallHandler { call, result ->
+                if (call.method == "getInitialLink") {
+                    result.success(pendingInitialLink)
+                    pendingInitialLink = null
+                } else {
+                    result.notImplemented()
+                }
+            }
+        }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {

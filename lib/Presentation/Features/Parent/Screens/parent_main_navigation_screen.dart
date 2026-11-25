@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:intelli_attend_faculty/Services/app_update_service.dart';
+import 'package:intelli_attend_faculty/Services/permission_service.dart';
 import '../../../../Theme/app_theme.dart';
+import '../../../Widgets/app_snack_bar.dart';
 import '../Controllers/parent_controller.dart';
 import 'parent_dashboard_tab.dart';
 import 'parent_attendance_tab.dart';
-import 'parent_leaves_tab.dart';
+import 'parent_chat_tab.dart';
 import 'parent_notices_faculty_tab.dart';
 import 'parent_profile_tab.dart';
 
@@ -14,21 +17,56 @@ class ParentMainNavigationScreen extends StatefulWidget {
   const ParentMainNavigationScreen({super.key, this.initialParentName});
 
   @override
-  State<ParentMainNavigationScreen> createState() => _ParentMainNavigationScreenState();
+  State<ParentMainNavigationScreen> createState() =>
+      _ParentMainNavigationScreenState();
 }
 
-class _ParentMainNavigationScreenState extends State<ParentMainNavigationScreen> {
+class _ParentMainNavigationScreenState
+    extends State<ParentMainNavigationScreen> {
   int _currentIndex = 0;
+  DateTime? _lastBackPressTime;
 
-  void _onTabChange(int index) {
-    setState(() => _currentIndex = index);
+  void _onTabChange(int index, [int subTab = 0]) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
+  void _handleBackPress() {
+    // 1. If not on Home tab, switch to Home tab first
+    if (_currentIndex != 0) {
+      HapticFeedback.selectionClick();
+      setState(() => _currentIndex = 0);
+      return;
+    }
+
+    // 2. On Home tab: Require double tap to exit
+    final now = DateTime.now();
+    if (_lastBackPressTime == null ||
+        now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+      _lastBackPressTime = now;
+      HapticFeedback.lightImpact();
+      AppSnackBar.showExitNotice(context);
+      return;
+    }
+
+    // 3. Double press confirmed within 2 seconds -> exit application
+    HapticFeedback.mediumImpact();
+    SystemNavigator.pop();
   }
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       _applySystemNavOverlay();
+      await Future.delayed(const Duration(milliseconds: 350));
+      if (mounted) {
+        await PermissionService().requestFirstLoginPermissions();
+      }
+      if (mounted) {
+        AppUpdateService.checkAndPromptUpdate(context);
+      }
     });
   }
 
@@ -41,15 +79,16 @@ class _ParentMainNavigationScreenState extends State<ParentMainNavigationScreen>
   void _applySystemNavOverlay() {
     if (!mounted) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final navColor = isDark ? const Color(0xFF101012) : Colors.white;
 
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-      systemNavigationBarColor: navColor,
+      systemNavigationBarColor: Colors.transparent,
       systemNavigationBarDividerColor: Colors.transparent,
-      systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarIconBrightness:
+          isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarContrastEnforced: false,
     ));
   }
 
@@ -62,38 +101,47 @@ class _ParentMainNavigationScreenState extends State<ParentMainNavigationScreen>
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-      systemNavigationBarColor: navColor,
+      systemNavigationBarColor: Colors.transparent,
       systemNavigationBarDividerColor: Colors.transparent,
-      systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarIconBrightness:
+          isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarContrastEnforced: false,
     );
 
     // Apply imperatively on each build
     SystemChrome.setSystemUIOverlayStyle(overlayStyle);
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlayStyle,
-      child: ChangeNotifierProvider(
-        create: (_) {
-          final c = ParentController();
-          if (widget.initialParentName != null &&
-              widget.initialParentName!.trim().isNotEmpty) {
-            c.setParentName(widget.initialParentName!);
-          }
-          return c;
-        },
-        child: Scaffold(
-          backgroundColor: AppTheme.bg(context),
-          body: IndexedStack(
-            index: _currentIndex,
-            children: [
-              ParentDashboardTab(onTabChange: _onTabChange),
-              const ParentAttendanceTab(),
-              const ParentLeavesTab(),
-              const ParentNoticesFacultyTab(),
-              const ParentProfileTab(),
-            ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _handleBackPress();
+      },
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlayStyle,
+        child: ChangeNotifierProvider(
+          create: (_) {
+            final c = ParentController();
+            if (widget.initialParentName != null &&
+                widget.initialParentName!.trim().isNotEmpty) {
+              c.setParentName(widget.initialParentName!);
+            }
+            return c;
+          },
+          child: Scaffold(
+            backgroundColor: AppTheme.bg(context),
+            body: IndexedStack(
+              index: _currentIndex,
+              children: [
+                ParentDashboardTab(onTabChange: _onTabChange),
+                const ParentAttendanceTab(),
+                const ParentChatTab(),
+                const ParentNoticesFacultyTab(),
+                const ParentProfileTab(),
+              ],
+            ),
+            bottomNavigationBar: _buildBottomNav(context, isDark, navColor),
           ),
-          bottomNavigationBar: _buildBottomNav(context, isDark, navColor),
         ),
       ),
     );
@@ -102,24 +150,25 @@ class _ParentMainNavigationScreenState extends State<ParentMainNavigationScreen>
   Widget _buildBottomNav(BuildContext context, bool isDark, Color navColor) {
     const navItems = [
       _NavItem(icon: Icons.dashboard_rounded, label: 'Home'),
-      _NavItem(icon: Icons.pie_chart_rounded, label: 'Attendance'),
-      _NavItem(icon: Icons.event_note_rounded, label: 'Leaves'),
+      _NavItem(icon: Icons.school_rounded, label: 'Academics'),
+      _NavItem(icon: Icons.chat_bubble_rounded, label: 'Chat'),
       _NavItem(icon: Icons.campaign_rounded, label: 'Notices'),
       _NavItem(icon: Icons.person_rounded, label: 'Profile'),
     ];
 
-    final activeColor = isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0F766E);
-    final activeBg = isDark
-        ? const Color(0xFF2DD4BF).withValues(alpha: 0.14)
-        : const Color(0xFF0F766E).withValues(alpha: 0.12);
-    final inactiveColor = isDark ? const Color(0xFF9E9E9E) : const Color(0xFF71717A);
+    const activeColor = Color(0xFF2DD4BF);
+    final activeBg = const Color(0xFF2DD4BF).withValues(alpha: 0.16);
+    final inactiveColor =
+        isDark ? const Color(0xFF9E9E9E) : const Color(0xFF71717A);
 
     return Container(
       decoration: BoxDecoration(
         color: navColor,
         border: Border(
           top: BorderSide(
-            color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF1F5F9),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : const Color(0xFFF1F5F9),
             width: 1,
           ),
         ),
@@ -145,12 +194,13 @@ class _ParentMainNavigationScreenState extends State<ParentMainNavigationScreen>
               return InkWell(
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  setState(() => _currentIndex = index);
+                  _onTabChange(index, 0);
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: isSelected ? activeBg : Colors.transparent,
                     borderRadius: BorderRadius.circular(16),

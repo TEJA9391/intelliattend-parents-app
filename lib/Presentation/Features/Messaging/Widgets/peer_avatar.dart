@@ -75,27 +75,31 @@ class PeerAvatar extends StatelessWidget {
                 fit: BoxFit.cover,
                 width: radius * 2,
                 height: radius * 2,
-                errorWidget: (_, __, ___) => _defaultIcon(),
-                placeholder: (_, __) => _defaultIcon(),
+                errorWidget: (_, __, ___) => _defaultIcon(context),
+                placeholder: (_, __) => _defaultIcon(context),
               )
-            : _defaultIcon(),
+            : _defaultIcon(context),
       ),
     );
   }
 
-  Widget _defaultIcon() {
+  Widget _defaultIcon(BuildContext context) {
+    final bg = backgroundColor ?? colorFor(name, context);
     return Container(
       width: radius * 2,
       height: radius * 2,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Color(0xFFDFE5E7),
+        color: bg,
       ),
       child: Center(
-        child: Icon(
-          Icons.person_rounded,
-          color: Colors.white,
-          size: radius * 0.9,
+        child: Text(
+          _initials,
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: radius * 0.72,
+          ),
         ),
       ),
     );

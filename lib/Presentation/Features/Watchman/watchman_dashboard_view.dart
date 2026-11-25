@@ -708,7 +708,7 @@ class WatchmanDashboardViewState extends State<WatchmanDashboardView> {
                                         ? Icons.cloud_done_rounded
                                         : Icons.verified_rounded,
                                     size: 14,
-                                    color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0D9488),
+                                    color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF2DD4BF),
                                   ),
                                   const SizedBox(width: 5),
                                   Text(
@@ -716,7 +716,7 @@ class WatchmanDashboardViewState extends State<WatchmanDashboardView> {
                                     style: GoogleFonts.inter(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
-                                      color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0D9488),
+                                      color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF2DD4BF),
                                       letterSpacing: 0.6,
                                     ),
                                   ),
@@ -830,7 +830,7 @@ class WatchmanDashboardViewState extends State<WatchmanDashboardView> {
                                   Icon(
                                     Icons.qr_code_scanner_rounded,
                                     size: 14,
-                                    color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0D9488),
+                                    color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF2DD4BF),
                                   ),
                                   const SizedBox(width: 5),
                                   Text(
@@ -838,7 +838,7 @@ class WatchmanDashboardViewState extends State<WatchmanDashboardView> {
                                     style: GoogleFonts.inter(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
-                                      color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0D9488),
+                                      color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF2DD4BF),
                                       letterSpacing: 0.6,
                                     ),
                                   ),
@@ -900,7 +900,7 @@ class WatchmanDashboardViewState extends State<WatchmanDashboardView> {
                                     Icon(
                                       Icons.camera_alt_rounded,
                                       size: 18,
-                                      color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0D9488),
+                                      color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF2DD4BF),
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
@@ -908,7 +908,7 @@ class WatchmanDashboardViewState extends State<WatchmanDashboardView> {
                                       style: GoogleFonts.inter(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
-                                        color: isDark ? Colors.white : const Color(0xFF0D9488),
+                                        color: isDark ? Colors.white : const Color(0xFF2DD4BF),
                                       ),
                                     ),
                                   ],

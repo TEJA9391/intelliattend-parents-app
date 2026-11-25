@@ -2,33 +2,129 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../Core/Network/api_client.dart';
 import '../../../../Services/notification_service.dart';
 import '../Models/parent_models.dart';
 
 class ParentController extends ChangeNotifier {
   ParentController() {
     _initMockData();
-    _loadSavedParentName();
+    _bootstrapLocalStorageAndSync();
     if (_childTransits.values.any((t) => t.isOnBus)) {
       _startTransitTimer();
     }
   }
 
-  String _parentName = 'Mr. & Mrs. Sharma';
+  Future<void> _bootstrapLocalStorageAndSync() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await _purgeLegacyDummyPrefsIfNeeded(prefs);
+      await _loadSavedParentName(prefs);
+      await _loadSavedChildAvatars(prefs);
+      await _loadSavedHealthRecords(prefs);
+      await fetchProfileFromServer();
+    } catch (e) {
+      debugPrint('[ParentSync] Bootstrap error: $e');
+    }
+  }
+
+  Future<void> _purgeLegacyDummyPrefsIfNeeded(SharedPreferences prefs) async {
+    if (prefs.getBool('profile_dummy_purged_v1') == true) return;
+
+    // Clear pre-update hardcoded mock defaults so Profile starts empty until
+    // server provides data or the guardian saves their real details.
+    if (prefs.getString('parent_full_name') == 'Mr. & Mrs. Sharma') {
+      await prefs.remove('parent_full_name');
+    }
+    if (prefs.getBool('guardian_sync_pending') != true) {
+      for (final key in const [
+        'parent_phone',
+        'parent_email',
+        'parent_city',
+        'guardian_relationship',
+        'emergency_contact_phone',
+      ]) {
+        await prefs.remove(key);
+      }
+    }
+    for (final child in _children) {
+      if (prefs.getBool('health_sync_pending_${child.id}') != true) {
+        for (final prefix in const [
+          'health_blood_',
+          'health_allergies_',
+          'health_conditions_',
+          'health_meds_',
+          'health_directives_',
+          'health_ins_provider_',
+          'health_ins_policy_',
+          'health_opd_',
+          'health_doc_name_',
+          'health_doc_phone_',
+          'health_hospital_',
+          'health_donor_',
+          'health_diet_',
+          'health_height_',
+          'health_weight_',
+          'health_sensory_',
+        ]) {
+          await prefs.remove('$prefix${child.id}');
+        }
+      }
+    }
+    await prefs.setBool('profile_dummy_purged_v1', true);
+  }
+
+  Future<void> updateChildAvatar(String childId, String newAvatarUrl) async {
+    final idx = _children.indexWhere((c) => c.id == childId);
+    if (idx != -1) {
+      _children[idx] = _children[idx].copyWith(avatarUrl: newAvatarUrl);
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('child_avatar_$childId', newAvatarUrl);
+      } catch (e) {
+        debugPrint('Error saving child avatar to SharedPreferences: $e');
+      }
+      try {
+        await ApiClient().dio.put(
+          '/api/v1/parent/students/$childId/avatar',
+          data: {'avatar_url': newAvatarUrl},
+        );
+      } catch (e) {
+        debugPrint('[ParentSync] Child avatar sync skipped/offline: $e');
+      }
+    }
+  }
+
+  Future<void> _loadSavedChildAvatars([SharedPreferences? existingPrefs]) async {
+    try {
+      final prefs = existingPrefs ?? await SharedPreferences.getInstance();
+      for (int i = 0; i < _children.length; i++) {
+        final saved = prefs.getString('child_avatar_${_children[i].id}');
+        if (saved != null && saved.isNotEmpty) {
+          _children[i] = _children[i].copyWith(avatarUrl: saved);
+        }
+      }
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  String _parentName = '';
   String get parentName => _parentName;
 
   void setParentName(String name, {bool save = true}) {
     final clean = name.trim();
-    if (clean.isEmpty) return;
     _parentName = clean;
 
-    final parts = clean.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.length >= 2) {
-      final surname = parts.last;
-      for (int i = 0; i < _children.length; i++) {
-        final current = _children[i];
-        final childFirst = i == 0 ? 'Aarav' : 'Ananya';
-        _children[i] = current.copyWith(name: '$childFirst $surname');
+    if (clean.isNotEmpty) {
+      final parts = clean.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+      if (parts.length >= 2) {
+        final surname = parts.last;
+        for (int i = 0; i < _children.length; i++) {
+          final current = _children[i];
+          final childFirst = i == 0 ? 'Aarav' : 'Ananya';
+          _children[i] = current.copyWith(name: '$childFirst $surname');
+        }
       }
     }
 
@@ -40,13 +136,319 @@ class ParentController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _loadSavedParentName() async {
+  Future<void> _loadSavedParentName([SharedPreferences? existingPrefs]) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = existingPrefs ?? await SharedPreferences.getInstance();
       final saved = prefs.getString('parent_full_name');
       if (saved != null && saved.trim().isNotEmpty) {
         setParentName(saved, save: false);
       }
+      _parentPhone = prefs.getString('parent_phone') ?? '';
+      _parentEmail = prefs.getString('parent_email') ?? '';
+      _parentCity = prefs.getString('parent_city') ?? '';
+      _guardianRelationship = prefs.getString('guardian_relationship') ?? '';
+      _emergencyContactPhone = prefs.getString('emergency_contact_phone') ?? '';
+      _guardianSyncPending = prefs.getBool('guardian_sync_pending') ?? false;
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  String _parentPhone = '';
+  String get parentPhone => _parentPhone;
+
+  String _parentEmail = '';
+  String get parentEmail => _parentEmail;
+
+  String _parentCity = '';
+  String get parentCity => _parentCity;
+
+  String _guardianRelationship = '';
+  String get guardianRelationship => _guardianRelationship;
+
+  String _emergencyContactPhone = '';
+  String get emergencyContactPhone => _emergencyContactPhone;
+
+  bool _guardianSyncPending = false;
+  bool get hasPendingProfileSync =>
+      _guardianSyncPending || _pendingHealthSyncIds.isNotEmpty;
+  final Set<String> _pendingHealthSyncIds = {};
+
+  /// Pulls official Guardian & Medical Records from the school server.
+  /// Defaults remain empty until provided by the server or edited in-app.
+  Future<void> fetchProfileFromServer() async {
+    try {
+      final dio = ApiClient().dio;
+
+      // 1. Sync any locally queued offline changes first
+      await syncPendingProfileChanges();
+
+      // 2. Fetch guardian info from server
+      try {
+        final res = await dio.get('/api/v1/parent/guardian');
+        if (res.statusCode == 200 && res.data is Map) {
+          final raw = res.data['data'] is Map ? res.data['data'] : res.data;
+          final data = Map<String, dynamic>.from(raw as Map);
+          await _applyGuardianServerData(data);
+        }
+      } catch (e) {
+        debugPrint('[ParentSync] Guardian fetch skipped/offline: $e');
+      }
+
+      // 3. Fetch medical / health records per child from server
+      for (final child in _children) {
+        try {
+          final res = await dio.get('/api/v1/parent/students/${child.id}/health-record');
+          if (res.statusCode == 200 && res.data is Map) {
+            final raw = res.data['data'] is Map ? res.data['data'] : res.data;
+            final record = StudentHealthRecord.fromJson(
+              child.id,
+              Map<String, dynamic>.from(raw as Map),
+            );
+            _healthRecords[child.id] = record;
+            await _persistHealthRecordLocally(child.id, record);
+            if (record.bloodGroup.isNotEmpty) {
+              final idx = _children.indexWhere((c) => c.id == child.id);
+              if (idx != -1) {
+                _children[idx] = _children[idx].copyWith(bloodGroup: record.bloodGroup);
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('[ParentSync] Health fetch skipped for ${child.id}: $e');
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[ParentSync] fetchProfileFromServer error: $e');
+    }
+  }
+
+  Future<void> _applyGuardianServerData(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = (data['name'] ?? data['full_name'] ?? '').toString().trim();
+    final phone = (data['phone'] ?? data['mobile'] ?? '').toString().trim();
+    final email = (data['email'] ?? '').toString().trim();
+    final city = (data['city'] ?? data['address'] ?? '').toString().trim();
+    final rel = (data['relationship'] ?? '').toString().trim();
+    final emerg = (data['emergency_phone'] ?? data['emergencyPhone'] ?? '').toString().trim();
+
+    if (name.isNotEmpty) setParentName(name, save: true);
+    _parentPhone = phone;
+    _parentEmail = email;
+    _parentCity = city;
+    _guardianRelationship = rel;
+    _emergencyContactPhone = emerg;
+
+    await prefs.setString('parent_phone', _parentPhone);
+    await prefs.setString('parent_email', _parentEmail);
+    await prefs.setString('parent_city', _parentCity);
+    await prefs.setString('guardian_relationship', _guardianRelationship);
+    await prefs.setString('emergency_contact_phone', _emergencyContactPhone);
+    await prefs.setBool('guardian_sync_pending', false);
+    _guardianSyncPending = false;
+  }
+
+  Future<bool> _pushGuardianToServer() async {
+    try {
+      final res = await ApiClient().dio.put(
+        '/api/v1/parent/guardian',
+        data: {
+          'name': _parentName,
+          'phone': _parentPhone,
+          'email': _parentEmail,
+          'city': _parentCity,
+          'relationship': _guardianRelationship,
+          'emergency_phone': _emergencyContactPhone,
+        },
+      );
+      return res.statusCode != null && res.statusCode! >= 200 && res.statusCode! < 300;
+    } catch (e) {
+      debugPrint('[ParentSync] Guardian sync to server deferred: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _pushHealthToServer(String childId, StudentHealthRecord record) async {
+    try {
+      final res = await ApiClient().dio.put(
+        '/api/v1/parent/students/$childId/health-record',
+        data: record.toJson(),
+      );
+      return res.statusCode != null && res.statusCode! >= 200 && res.statusCode! < 300;
+    } catch (e) {
+      debugPrint('[ParentSync] Health sync to server deferred for $childId: $e');
+      return false;
+    }
+  }
+
+  /// Retries syncing any pending local edits to the server.
+  Future<void> syncPendingProfileChanges() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_guardianSyncPending) {
+      final ok = await _pushGuardianToServer();
+      if (ok) {
+        _guardianSyncPending = false;
+        await prefs.setBool('guardian_sync_pending', false);
+      }
+    }
+    for (final childId in _pendingHealthSyncIds.toList()) {
+      final record = _healthRecords[childId];
+      if (record != null) {
+        final ok = await _pushHealthToServer(childId, record);
+        if (ok) {
+          _pendingHealthSyncIds.remove(childId);
+          await prefs.setBool('health_sync_pending_$childId', false);
+        }
+      }
+    }
+  }
+
+  /// Saves guardian edits locally and immediately syncs to server.
+  /// Returns true if server sync succeeded, false if queued offline.
+  Future<bool> updateGuardianInfo({
+    required String name,
+    required String phone,
+    required String email,
+    required String city,
+    required String relationship,
+    required String emergencyPhone,
+  }) async {
+    setParentName(name, save: true);
+    _parentPhone = phone.trim();
+    _parentEmail = email.trim();
+    _parentCity = city.trim();
+    _guardianRelationship = relationship.trim();
+    _emergencyContactPhone = emergencyPhone.trim();
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('parent_phone', _parentPhone);
+      await prefs.setString('parent_email', _parentEmail);
+      await prefs.setString('parent_city', _parentCity);
+      await prefs.setString('guardian_relationship', _guardianRelationship);
+      await prefs.setString('emergency_contact_phone', _emergencyContactPhone);
+
+      final synced = await _pushGuardianToServer();
+      _guardianSyncPending = !synced;
+      await prefs.setBool('guardian_sync_pending', _guardianSyncPending);
+      notifyListeners();
+      return synced;
+    } catch (e) {
+      debugPrint('Error saving guardian info: $e');
+      return false;
+    }
+  }
+
+  // Student Health & Emergency Vault Records (empty by default until server/user populates)
+  final Map<String, StudentHealthRecord> _healthRecords = {};
+
+  StudentHealthRecord healthRecordForChild(String childId) {
+    if (!_healthRecords.containsKey(childId)) {
+      _healthRecords[childId] = StudentHealthRecord(childId: childId);
+    }
+    return _healthRecords[childId]!;
+  }
+
+  StudentHealthRecord get activeChildHealthRecord => healthRecordForChild(_activeChildId);
+
+  Future<void> _persistHealthRecordLocally(
+      String childId, StudentHealthRecord record) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('health_blood_$childId', record.bloodGroup);
+    await prefs.setString('health_allergies_$childId', record.allergies);
+    await prefs.setString('health_conditions_$childId', record.chronicConditions);
+    await prefs.setString('health_meds_$childId', record.dailyMedications);
+    await prefs.setString('health_directives_$childId', record.criticalDirectives);
+    await prefs.setString('health_ins_provider_$childId', record.insuranceProvider);
+    await prefs.setString('health_ins_policy_$childId', record.insurancePolicyNumber);
+    await prefs.setString('health_opd_$childId', record.campusClinicOpdId);
+    await prefs.setString('health_doc_name_$childId', record.primaryDoctorName);
+    await prefs.setString('health_doc_phone_$childId', record.primaryDoctorPhone);
+    await prefs.setString('health_hospital_$childId', record.preferredHospital);
+    await prefs.setBool('health_donor_$childId', record.isOrganDonor);
+    await prefs.setString('health_diet_$childId', record.dietaryNeeds);
+    await prefs.setString('health_height_$childId', record.heightCm);
+    await prefs.setString('health_weight_$childId', record.weightKg);
+    await prefs.setString('health_sensory_$childId', record.sensoryAids);
+  }
+
+  /// Saves health record locally and immediately syncs to server.
+  /// Returns true if server sync succeeded, false if queued offline.
+  Future<bool> updateChildHealthRecord(
+      String childId, StudentHealthRecord record) async {
+    _healthRecords[childId] = record;
+
+    final idx = _children.indexWhere((c) => c.id == childId);
+    if (idx != -1 && record.bloodGroup.isNotEmpty) {
+      _children[idx] = _children[idx].copyWith(bloodGroup: record.bloodGroup);
+    }
+    notifyListeners();
+
+    try {
+      await _persistHealthRecordLocally(childId, record);
+      final prefs = await SharedPreferences.getInstance();
+      final synced = await _pushHealthToServer(childId, record);
+      if (synced) {
+        _pendingHealthSyncIds.remove(childId);
+      } else {
+        _pendingHealthSyncIds.add(childId);
+      }
+      await prefs.setBool('health_sync_pending_$childId', !synced);
+      notifyListeners();
+      return synced;
+    } catch (e) {
+      debugPrint('Error saving health record: $e');
+      return false;
+    }
+  }
+
+  Future<void> _loadSavedHealthRecords([SharedPreferences? existingPrefs]) async {
+    try {
+      final prefs = existingPrefs ?? await SharedPreferences.getInstance();
+      for (final child in _children) {
+        final blood = prefs.getString('health_blood_${child.id}') ?? '';
+        final allergies = prefs.getString('health_allergies_${child.id}') ?? '';
+        final conditions = prefs.getString('health_conditions_${child.id}') ?? '';
+        final meds = prefs.getString('health_meds_${child.id}') ?? '';
+        final directives = prefs.getString('health_directives_${child.id}') ?? '';
+        final insProvider = prefs.getString('health_ins_provider_${child.id}') ?? '';
+        final insPolicy = prefs.getString('health_ins_policy_${child.id}') ?? '';
+        final opd = prefs.getString('health_opd_${child.id}') ?? '';
+        final docName = prefs.getString('health_doc_name_${child.id}') ?? '';
+        final docPhone = prefs.getString('health_doc_phone_${child.id}') ?? '';
+        final hospital = prefs.getString('health_hospital_${child.id}') ?? '';
+        final isDonor = prefs.getBool('health_donor_${child.id}') ?? false;
+        final diet = prefs.getString('health_diet_${child.id}') ?? '';
+        final height = prefs.getString('health_height_${child.id}') ?? '';
+        final weight = prefs.getString('health_weight_${child.id}') ?? '';
+        final sensory = prefs.getString('health_sensory_${child.id}') ?? '';
+
+        if (prefs.getBool('health_sync_pending_${child.id}') == true) {
+          _pendingHealthSyncIds.add(child.id);
+        }
+
+        _healthRecords[child.id] = StudentHealthRecord(
+          childId: child.id,
+          bloodGroup: blood,
+          allergies: allergies,
+          chronicConditions: conditions,
+          dailyMedications: meds,
+          criticalDirectives: directives,
+          insuranceProvider: insProvider,
+          insurancePolicyNumber: insPolicy,
+          campusClinicOpdId: opd,
+          primaryDoctorName: docName,
+          primaryDoctorPhone: docPhone,
+          preferredHospital: hospital,
+          isOrganDonor: isDonor,
+          dietaryNeeds: diet,
+          heightCm: height,
+          weightKg: weight,
+          sensoryAids: sensory,
+        );
+      }
+      notifyListeners();
     } catch (_) {}
   }
 
@@ -84,6 +486,72 @@ class ParentController extends ChangeNotifier {
   // Faculty mentors
   final List<FacultyMentor> _mentors = [];
   List<FacultyMentor> get mentors => List.unmodifiable(_mentors);
+
+  // Notifications from Faculty & Authorities
+  final List<ParentNotificationMessage> _notifications = [];
+  List<ParentNotificationMessage> get notifications => List.unmodifiable(_notifications);
+  int get unreadNotificationsCount => _notifications.where((n) => !n.isRead && !n.isArchived).length;
+  int get archivedNotificationsCount => _notifications.where((n) => n.isArchived).length;
+
+  void markNotificationAsRead(String id) {
+    final idx = _notifications.indexWhere((n) => n.id == id);
+    if (idx != -1 && !_notifications[idx].isRead) {
+      _notifications[idx].isRead = true;
+      notifyListeners();
+    }
+  }
+
+  void markAllNotificationsAsRead() {
+    bool changed = false;
+    for (var n in _notifications) {
+      if (!n.isRead && !n.isArchived) {
+        n.isRead = true;
+        changed = true;
+      }
+    }
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  void toggleNotificationRead(String id) {
+    final idx = _notifications.indexWhere((n) => n.id == id);
+    if (idx != -1) {
+      _notifications[idx].isRead = !_notifications[idx].isRead;
+      notifyListeners();
+    }
+  }
+
+  void archiveNotification(String id) {
+    final idx = _notifications.indexWhere((n) => n.id == id);
+    if (idx != -1) {
+      _notifications[idx].isArchived = true;
+      notifyListeners();
+    }
+  }
+
+  void unarchiveNotification(String id) {
+    final idx = _notifications.indexWhere((n) => n.id == id);
+    if (idx != -1) {
+      _notifications[idx].isArchived = false;
+      notifyListeners();
+    }
+  }
+
+  void clearReadNotifications() {
+    _notifications.removeWhere((n) => n.isRead && !n.isArchived);
+    notifyListeners();
+  }
+
+  void deleteNotification(String id) {
+    _notifications.removeWhere((n) => n.id == id);
+    notifyListeners();
+  }
+
+  void addNotification(ParentNotificationMessage message) {
+    _notifications.insert(0, message);
+    notifyListeners();
+  }
 
   // Real-time Bus Transit Tracking
   final Map<String, StudentBusTransit> _childTransits = {};
@@ -145,6 +613,22 @@ class ParentController extends ChangeNotifier {
       title: '🚌 Bus Boarded Alert',
       body: '${child.name} has tapped their RFID card and boarded ${existing.busNumber}. Live tracking is active.',
     );
+    addNotification(
+      ParentNotificationMessage(
+        id: 'rfid_board_${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Bus Boarded: RFID Scan Confirmed',
+        message: '${child.name} tapped their student RFID card and boarded ${existing.busNumber}. Real-time bus GPS tracking is currently active.',
+        senderName: 'Campus Transport Authority',
+        senderRole: 'RFID Gate & Fleet Logistics',
+        senderDepartment: 'Security & Fleet Operations',
+        senderType: NotificationSenderType.authority,
+        childId: childId,
+        childName: child.name,
+        timestamp: DateTime.now(),
+        priority: NotificationPriority.info,
+        isRead: false,
+      ),
+    );
   }
 
   /// Called when student taps RFID on the physical reader device on the bus to exit / deboard
@@ -179,6 +663,22 @@ class ParentController extends ChangeNotifier {
       id: childId.hashCode + 1,
       title: '🏡 Safely Arrived at $placeName',
       body: '${child.name} has safely reached $placeName (${existing.destinationCampus}). Live location tracking exited.',
+    );
+    addNotification(
+      ParentNotificationMessage(
+        id: 'rfid_deboard_${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Safe Arrival: Deboarded at $placeName',
+        message: '${child.name} tapped RFID and safely deboarded ${existing.busNumber} at $placeName. Transit logged successfully.',
+        senderName: 'Campus Transport Authority',
+        senderRole: 'RFID Gate & Fleet Logistics',
+        senderDepartment: 'Security & Fleet Operations',
+        senderType: NotificationSenderType.authority,
+        childId: childId,
+        childName: child.name,
+        timestamp: DateTime.now(),
+        priority: NotificationPriority.info,
+        isRead: false,
+      ),
     );
   }
 
@@ -313,7 +813,7 @@ class ParentController extends ChangeNotifier {
   Future<void> refreshData() async {
     _isLoading = true;
     notifyListeners();
-    await Future.delayed(const Duration(milliseconds: 650));
+    await fetchProfileFromServer();
     _isLoading = false;
     notifyListeners();
   }
@@ -341,208 +841,252 @@ class ParentController extends ChangeNotifier {
   }
 
   void _initMockData() {
-    // 1. Linked Children
+    // 1. Linked Children (School Configuration)
     _children.addAll([
       const ChildProfile(
         id: 'child_1',
-        name: 'Aarav Sharma',
-        rollNumber: '21CS042',
-        program: 'B.Tech - Computer Science & Engineering',
-        semester: 'Semester VI (Sec A)',
-        avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=300&q=80',
+        name: 'Aarav Boora',
+        rollNumber: '14',
+        program: 'Class 10',
+        semester: 'Section A',
+        avatarUrl: 'preset:aarav',
         bloodGroup: 'O+ve',
-        mentorName: 'Dr. Rajeshwari Raman',
+        mentorName: 'Mrs. Sunita Sharma (Class Teacher)',
         mentorPhone: '+91 98450 12345',
-        overallAttendance: 84.6,
+        overallAttendance: 94.6,
         academicYear: '2026 - 2027',
       ),
       const ChildProfile(
         id: 'child_2',
-        name: 'Ananya Sharma',
-        rollNumber: '24EC118',
-        program: 'B.Tech - Electronics & Communication',
-        semester: 'Semester II (Sec C)',
-        avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80',
+        name: 'Ananya Boora',
+        rollNumber: '22',
+        program: 'Class 7',
+        semester: 'Section B',
+        avatarUrl: 'preset:ananya',
         bloodGroup: 'B+ve',
-        mentorName: 'Prof. Ananth Kumar',
+        mentorName: 'Mrs. Kavita Reddy (Class Teacher)',
         mentorPhone: '+91 98450 67890',
-        overallAttendance: 71.8,
+        overallAttendance: 91.2,
         academicYear: '2026 - 2027',
       ),
     ]);
 
-    // 2. Child 1 Classes Today
+    // 2. Child 1 Classes Today (Class 10 School Routine)
     _childTodayClasses['child_1'] = [
       const PeriodAttendance(
         periodNumber: 'Period 1',
-        subjectName: 'Design & Analysis of Algorithms',
-        subjectCode: 'CS601',
+        subjectName: 'Mathematics',
+        subjectCode: 'MTH-10',
         startTime: '09:00 AM',
-        endTime: '10:00 AM',
-        room: 'Lab Complex 304',
-        facultyName: 'Dr. Rajeshwari Raman',
+        endTime: '09:45 AM',
+        room: 'Class 10-A',
+        facultyName: 'Mrs. Sunita Sharma',
         status: PeriodStatus.present,
-        timeMarked: '09:04 AM via SmartBoard QR',
+        timeMarked: '09:02 AM via RFID Gate',
       ),
       const PeriodAttendance(
         periodNumber: 'Period 2',
-        subjectName: 'Cloud Computing & Distributed Systems',
-        subjectCode: 'CS602',
-        startTime: '10:05 AM',
-        endTime: '11:05 AM',
-        room: 'Seminar Hall B',
-        facultyName: 'Prof. Vikram Sen',
+        subjectName: 'English Language & Literature',
+        subjectCode: 'ENG-10',
+        startTime: '09:50 AM',
+        endTime: '10:35 AM',
+        room: 'Class 10-A',
+        facultyName: 'Mrs. Ananya Gupta',
         status: PeriodStatus.present,
-        timeMarked: '10:07 AM via Bluetooth BLE',
+        timeMarked: '09:52 AM via Smart Register',
       ),
       const PeriodAttendance(
         periodNumber: 'Period 3',
-        subjectName: 'Compiler Design',
-        subjectCode: 'CS603',
-        startTime: '11:20 AM',
-        endTime: '12:20 PM',
-        room: 'Tech Block 201',
-        facultyName: 'Dr. Sunita Rao',
+        subjectName: 'Science (Physics & Chemistry)',
+        subjectCode: 'SCI-10',
+        startTime: '10:50 AM',
+        endTime: '11:35 AM',
+        room: 'Science Lab 2',
+        facultyName: 'Mr. R. K. Verma',
         status: PeriodStatus.present,
-        timeMarked: '11:23 AM via SmartBoard QR',
+        timeMarked: '10:53 AM via Bluetooth BLE',
       ),
       const PeriodAttendance(
         periodNumber: 'Period 4',
-        subjectName: 'Machine Learning Lab',
-        subjectCode: 'CS604P',
-        startTime: '01:30 PM',
-        endTime: '03:30 PM',
-        room: 'AI Computing Lab 1',
-        facultyName: 'Prof. Arvind Menon',
+        subjectName: 'Social Science (History & Civics)',
+        subjectCode: 'SST-10',
+        startTime: '11:40 AM',
+        endTime: '12:25 PM',
+        room: 'Class 10-A',
+        facultyName: 'Mrs. Kavita Reddy',
         status: PeriodStatus.upcoming,
       ),
       const PeriodAttendance(
         periodNumber: 'Period 5',
-        subjectName: 'Professional Ethics & Cyber Law',
-        subjectCode: 'HS601',
-        startTime: '03:45 PM',
-        endTime: '04:45 PM',
-        room: 'Lecture Hall 102',
-        facultyName: 'Dr. Meera Nambiar',
+        subjectName: 'Hindi / Regional Language',
+        subjectCode: 'HIN-10',
+        startTime: '01:10 PM',
+        endTime: '01:50 PM',
+        room: 'Class 10-A',
+        facultyName: 'Mr. Arvind Joshi',
+        status: PeriodStatus.upcoming,
+      ),
+      const PeriodAttendance(
+        periodNumber: 'Period 6',
+        subjectName: 'Computer Science & AI Coding',
+        subjectCode: 'CS-10',
+        startTime: '01:55 PM',
+        endTime: '02:40 PM',
+        room: 'Computer Lab 1',
+        facultyName: 'Ms. Priya Nair',
+        status: PeriodStatus.upcoming,
+      ),
+      const PeriodAttendance(
+        periodNumber: 'Period 7',
+        subjectName: 'Physical Education & Games',
+        subjectCode: 'PET-10',
+        startTime: '02:45 PM',
+        endTime: '03:30 PM',
+        room: 'School Playground',
+        facultyName: 'Coach Vikram Singh',
         status: PeriodStatus.upcoming,
       ),
     ];
 
-    // Child 2 Classes Today
+    // Child 2 Classes Today (Class 7 School Routine)
     _childTodayClasses['child_2'] = [
       const PeriodAttendance(
         periodNumber: 'Period 1',
-        subjectName: 'Engineering Mathematics II',
-        subjectCode: 'MA201',
+        subjectName: 'General Science',
+        subjectCode: 'SCI-07',
         startTime: '09:00 AM',
-        endTime: '10:00 AM',
-        room: 'Sciences Block 101',
-        facultyName: 'Dr. K. Srinivas',
+        endTime: '09:45 AM',
+        room: 'Class 7-B',
+        facultyName: 'Mrs. Kavita Reddy',
         status: PeriodStatus.present,
         timeMarked: '09:02 AM',
       ),
       const PeriodAttendance(
         periodNumber: 'Period 2',
-        subjectName: 'Basic Electrical Engineering',
-        subjectCode: 'EE201',
-        startTime: '10:05 AM',
-        endTime: '11:05 AM',
-        room: 'Electrical Block 202',
-        facultyName: 'Prof. Ananth Kumar',
+        subjectName: 'Mathematics',
+        subjectCode: 'MTH-07',
+        startTime: '09:50 AM',
+        endTime: '10:35 AM',
+        room: 'Class 7-B',
+        facultyName: 'Mr. P. N. Rao',
         status: PeriodStatus.absent,
-        timeMarked: 'Unexcused Absence recorded',
+        timeMarked: 'Late Arrival Recorded',
       ),
       const PeriodAttendance(
         periodNumber: 'Period 3',
-        subjectName: 'Engineering Physics',
-        subjectCode: 'PH201',
-        startTime: '11:20 AM',
-        endTime: '12:20 PM',
-        room: 'Science Lab 3',
-        facultyName: 'Dr. Nandini Sharma',
+        subjectName: 'Social Studies',
+        subjectCode: 'SST-07',
+        startTime: '10:50 AM',
+        endTime: '11:35 AM',
+        room: 'Class 7-B',
+        facultyName: 'Mrs. Sunita Sharma',
         status: PeriodStatus.present,
-        timeMarked: '11:21 AM',
+        timeMarked: '10:52 AM',
       ),
       const PeriodAttendance(
         periodNumber: 'Period 4',
-        subjectName: 'Digital Logic Design',
-        subjectCode: 'EC202',
-        startTime: '01:30 PM',
-        endTime: '02:30 PM',
-        room: 'VLSI Studio',
-        facultyName: 'Prof. Harish B.',
+        subjectName: 'English Grammar',
+        subjectCode: 'ENG-07',
+        startTime: '11:40 AM',
+        endTime: '12:25 PM',
+        room: 'Class 7-B',
+        facultyName: 'Ms. Priya Nair',
+        status: PeriodStatus.upcoming,
+      ),
+      const PeriodAttendance(
+        periodNumber: 'Period 5',
+        subjectName: 'Art & Craft',
+        subjectCode: 'ART-07',
+        startTime: '01:10 PM',
+        endTime: '01:50 PM',
+        room: 'Art Studio',
+        facultyName: 'Mrs. Meera Roy',
         status: PeriodStatus.upcoming,
       ),
     ];
 
-    // 3. Child 1 Subjects
+    // 3. Child 1 School Subjects
     _childSubjects['child_1'] = [
       const SubjectAttendance(
-        subjectName: 'Design & Analysis of Algorithms',
-        code: 'CS601',
-        facultyName: 'Dr. Rajeshwari Raman',
-        attendedClasses: 38,
-        totalClasses: 42,
+        subjectName: 'Mathematics',
+        code: 'MTH-10',
+        facultyName: 'Mrs. Sunita Sharma',
+        attendedClasses: 45,
+        totalClasses: 48,
       ),
       const SubjectAttendance(
-        subjectName: 'Cloud Computing & Distributed Systems',
-        code: 'CS602',
-        facultyName: 'Prof. Vikram Sen',
-        attendedClasses: 34,
-        totalClasses: 40,
+        subjectName: 'Science (Physics, Chem, Bio)',
+        code: 'SCI-10',
+        facultyName: 'Mr. R. K. Verma',
+        attendedClasses: 44,
+        totalClasses: 46,
       ),
       const SubjectAttendance(
-        subjectName: 'Compiler Design',
-        code: 'CS603',
-        facultyName: 'Dr. Sunita Rao',
-        attendedClasses: 36,
+        subjectName: 'English Language & Literature',
+        code: 'ENG-10',
+        facultyName: 'Mrs. Ananya Gupta',
+        attendedClasses: 42,
         totalClasses: 44,
       ),
       const SubjectAttendance(
-        subjectName: 'Machine Learning Lab',
-        code: 'CS604P',
-        facultyName: 'Prof. Arvind Menon',
-        attendedClasses: 22,
-        totalClasses: 24,
+        subjectName: 'Social Science (History, Geo, Civics)',
+        code: 'SST-10',
+        facultyName: 'Mrs. Kavita Reddy',
+        attendedClasses: 39,
+        totalClasses: 42,
       ),
       const SubjectAttendance(
-        subjectName: 'Professional Ethics & Cyber Law',
-        code: 'HS601',
-        facultyName: 'Dr. Meera Nambiar',
-        attendedClasses: 28,
+        subjectName: 'Hindi / Regional Language',
+        code: 'HIN-10',
+        facultyName: 'Mr. Arvind Joshi',
+        attendedClasses: 40,
+        totalClasses: 42,
+      ),
+      const SubjectAttendance(
+        subjectName: 'Computer Science & AI Coding',
+        code: 'CS-10',
+        facultyName: 'Ms. Priya Nair',
+        attendedClasses: 30,
         totalClasses: 32,
       ),
     ];
 
-    // Child 2 Subjects
+    // Child 2 School Subjects
     _childSubjects['child_2'] = [
       const SubjectAttendance(
-        subjectName: 'Engineering Mathematics II',
-        code: 'MA201',
-        facultyName: 'Dr. K. Srinivas',
-        attendedClasses: 26,
-        totalClasses: 36,
+        subjectName: 'Mathematics',
+        code: 'MTH-07',
+        facultyName: 'Mr. P. N. Rao',
+        attendedClasses: 40,
+        totalClasses: 44,
       ),
       const SubjectAttendance(
-        subjectName: 'Basic Electrical Engineering',
-        code: 'EE201',
-        facultyName: 'Prof. Ananth Kumar',
-        attendedClasses: 21,
-        totalClasses: 35,
+        subjectName: 'General Science',
+        code: 'SCI-07',
+        facultyName: 'Mrs. Kavita Reddy',
+        attendedClasses: 42,
+        totalClasses: 44,
       ),
       const SubjectAttendance(
-        subjectName: 'Engineering Physics',
-        code: 'PH201',
-        facultyName: 'Dr. Nandini Sharma',
-        attendedClasses: 30,
-        totalClasses: 38,
+        subjectName: 'English Grammar',
+        code: 'ENG-07',
+        facultyName: 'Ms. Priya Nair',
+        attendedClasses: 38,
+        totalClasses: 40,
       ),
       const SubjectAttendance(
-        subjectName: 'Digital Logic Design',
-        code: 'EC202',
-        facultyName: 'Prof. Harish B.',
-        attendedClasses: 24,
-        totalClasses: 32,
+        subjectName: 'Social Studies',
+        code: 'SST-07',
+        facultyName: 'Mrs. Sunita Sharma',
+        attendedClasses: 36,
+        totalClasses: 40,
+      ),
+      const SubjectAttendance(
+        subjectName: 'Hindi Language',
+        code: 'HIN-07',
+        facultyName: 'Mr. Arvind Joshi',
+        attendedClasses: 39,
+        totalClasses: 42,
       ),
     ];
 
@@ -589,31 +1133,40 @@ class ParentController extends ChangeNotifier {
     _notices.addAll([
       CampusNotice(
         id: 'notice_1',
-        title: 'Mid-Semester Examination Schedule Announced',
-        summary: 'Theory exams start Nov 14. Minimum 75% attendance mandatory for hall ticket generation.',
-        fullContent: 'The controller of examinations has officially released the timetable for the Mid-Semester Examinations. Students with attendance under 75% in any course will be categorized as defaulters and must obtain prior departmental condonation.',
-        publishedDate: DateTime.now().subtract(const Duration(hours: 5)),
+        title: 'Half-Yearly Examination Schedule Announced (Class 1 to 10)',
+        summary: 'Half-yearly exams commence Dec 08. Minimum 75% attendance mandatory for admit cards.',
+        fullContent: 'The Examination Directorate has released the official routine for the Half-Yearly Examinations. Admit cards will be handed over by respective Class Teachers next week. Students must be present in proper school uniform.',
+        publishedDate: DateTime.now().subtract(const Duration(hours: 4)),
         category: NoticeCategory.exam,
         isUrgent: true,
-        publishedBy: 'Office of Controller of Examinations',
+        publishedBy: 'Office of the Principal & Exam Cell',
       ),
       CampusNotice(
         id: 'notice_2',
-        title: 'Parent-Teacher Meeting (PTM) for 6th Sem B.Tech',
-        summary: 'Scheduled for Saturday, Nov 08 at 10:00 AM via Hybrid Mode (Campus Aud. & Google Meet).',
-        fullContent: 'We invite all parents to attend the Mid-Semester PTM to review your ward academic progression, attendance trends, and upcoming placement readiness programs. Hybrid meeting links will be shared 2 days prior.',
+        title: 'Term-1 Parent-Teacher Meeting (PTM)',
+        summary: 'Scheduled for Saturday, Nov 29 from 9:00 AM to 1:00 PM in respective classrooms.',
+        fullContent: 'All parents are warmly invited to attend the Term-1 PTM to discuss their ward\'s academic progress, class performance, and homework submissions with the Class Teacher and Subject Teachers.',
         publishedDate: DateTime.now().subtract(const Duration(days: 1)),
         category: NoticeCategory.event,
-        publishedBy: 'Dean of Student Affairs',
+        publishedBy: 'School Administration',
       ),
       CampusNotice(
         id: 'notice_3',
-        title: 'Upcoming National Festival Holiday Declaration',
-        summary: 'College and campus offices will remain closed on Friday, Nov 01.',
-        fullContent: 'The institution will remain closed for all academic and laboratory sessions on Friday, Nov 01. Regular classes will resume on Monday, Nov 04.',
-        publishedDate: DateTime.now().subtract(const Duration(days: 3)),
+        title: 'Annual Sports Day & Winter Uniform Notification',
+        summary: 'Switch to winter uniform from Dec 01. Sports Day house trials start next week.',
+        fullContent: 'Starting Monday, Dec 01, all students are required to wear the official navy blue school blazer. Inter-house sports selection trials for track events and football will take place during zero periods.',
+        publishedDate: DateTime.now().subtract(const Duration(days: 2)),
+        category: NoticeCategory.academic,
+        publishedBy: 'Physical Education Department',
+      ),
+      CampusNotice(
+        id: 'notice_4',
+        title: 'Upcoming Festival Holiday Declaration',
+        summary: 'School and administrative offices will remain closed on Friday.',
+        fullContent: 'The school will remain closed for all students and staff this Friday on account of the festive holiday. Regular morning classes will resume on Monday at 8:00 AM sharp.',
+        publishedDate: DateTime.now().subtract(const Duration(days: 4)),
         category: NoticeCategory.holiday,
-        publishedBy: 'Registrar Office',
+        publishedBy: 'Principal\'s Office',
       ),
     ]);
 
@@ -655,7 +1208,7 @@ class ParentController extends ChangeNotifier {
     final isMorning = DateTime.now().hour < 12;
     _childTransits['child_1'] = StudentBusTransit(
       childId: 'child_1',
-      isOnBus: true, // Active live tracking so the user sees it immediately on launch!
+      isOnBus: false, // Inactive by default: Gray & non-clickable until student enters bus and taps RFID
       busNumber: 'Bus #14',
       vehiclePlate: 'KA-04-E-2048',
       routeName: isMorning ? 'Route 14B • Morning School Express' : 'Route 14B • Evening Home Express',
@@ -764,6 +1317,131 @@ class ParentController extends ChangeNotifier {
         ),
       ],
     );
+
+    // 8. Notifications from Faculty & Campus Authorities
+    _notifications.addAll([
+      ParentNotificationMessage(
+        id: 'notif_1',
+        title: 'DAA Lab Performance & Practical Review',
+        message:
+            'Aarav has been demonstrating commendable consistency in Design & Analysis of Algorithms lab sessions. His aggregate attendance is strong at 84.6%. Please ensure he prepares for the upcoming complex algorithms evaluation next Tuesday.',
+        senderName: 'Dr. Rajeshwari Raman',
+        senderRole: 'Class Advisor & Mentor (CSE VI Sem)',
+        senderDepartment: 'Computer Science & Engineering',
+        senderPhone: '+91 98450 12345',
+        senderEmail: 'rajeshwari.r@intelliattend.edu',
+        senderType: NotificationSenderType.faculty,
+        childId: 'child_1',
+        childName: 'Aarav Boora',
+        timestamp: DateTime.now().subtract(const Duration(minutes: 25)),
+        priority: NotificationPriority.info,
+        actionLabel: 'Call Mentor',
+        actionRoute: 'call_mentor',
+        isRead: false,
+      ),
+      ParentNotificationMessage(
+        id: 'notif_2',
+        title: 'Attendance Alert: Basic Electrical Engineering',
+        message:
+            'Dear Parent, Ananya\'s attendance in Basic Electrical Engineering (EE201) is currently at 60.0% (needs 21 consecutive lectures to achieve 75% cutoff). A special remedial clarification tutorial is scheduled this Thursday at 4:00 PM in Admin Block Room 108. Please advise her to attend.',
+        senderName: 'Prof. Ananth Kumar',
+        senderRole: 'HOD & First-Year Mentor (ECE)',
+        senderDepartment: 'Electronics & Communication',
+        senderPhone: '+91 98450 67890',
+        senderEmail: 'ananth.k@intelliattend.edu',
+        senderType: NotificationSenderType.faculty,
+        childId: 'child_2',
+        childName: 'Ananya Boora',
+        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+        priority: NotificationPriority.important,
+        actionLabel: 'Call Faculty',
+        actionRoute: 'call_mentor',
+        isRead: false,
+      ),
+      ParentNotificationMessage(
+        id: 'notif_3',
+        title: 'Annual Parent-Teacher Conference (PTM) Invitation',
+        message:
+            'Dear Parents, the Semester IV & II Parent-Teacher Conference will convene this Saturday, 28th Nov at 10:00 AM. We encourage all parents to interact with department faculty regarding academic progress, semester milestones, and placements.',
+        senderName: 'Office of the Principal',
+        senderRole: 'Executive Office • College Administration',
+        senderDepartment: 'Office of Principal Dr. V. Chandrasekhar',
+        senderPhone: '+91 80 2345 6700',
+        senderEmail: 'principal@intelliattend.edu',
+        senderType: NotificationSenderType.authority,
+        timestamp: DateTime.now().subtract(const Duration(hours: 5)),
+        priority: NotificationPriority.important,
+        actionLabel: 'View Circular',
+        actionRoute: 'notices',
+        isRead: false,
+      ),
+      ParentNotificationMessage(
+        id: 'notif_4',
+        title: 'Semester Examination Hall Ticket Eligibility Criterion',
+        message:
+            'Official Advisory: Mandatory 75% minimum aggregate attendance is strictly required for generating exam hall tickets. The condonation window for medical certificates closes on 30th Nov. Defaulter lists have been published on the departmental boards.',
+        senderName: 'Controller of Examinations',
+        senderRole: 'University Examination Branch',
+        senderDepartment: 'Office of the COE',
+        senderEmail: 'exams@intelliattend.edu',
+        senderType: NotificationSenderType.authority,
+        timestamp: DateTime.now().subtract(const Duration(hours: 22)),
+        priority: NotificationPriority.urgent,
+        actionLabel: 'View Attendance',
+        actionRoute: 'attendance',
+        isRead: true,
+      ),
+      ParentNotificationMessage(
+        id: 'notif_5',
+        title: 'Compiler Design Assignment #3 Grade Published',
+        message:
+            'Aarav\'s parsing algorithms assignment #3 has been evaluated and marked with Grade A (19/20). On-duty attendance for representing the university in the AI Hackathon has also been officially credited.',
+        senderName: 'Dr. Sunita Rao',
+        senderRole: 'Subject Professor (Compiler Design)',
+        senderDepartment: 'Computer Science & Engineering',
+        senderPhone: '+91 98450 33441',
+        senderEmail: 'sunita.rao@intelliattend.edu',
+        senderType: NotificationSenderType.faculty,
+        childId: 'child_1',
+        childName: 'Aarav Boora',
+        timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 4)),
+        priority: NotificationPriority.info,
+        actionLabel: 'Call Faculty',
+        actionRoute: 'call_mentor',
+        isRead: true,
+      ),
+      ParentNotificationMessage(
+        id: 'notif_6',
+        title: 'Bus Route #14 Schedule Adjustment Notice',
+        message:
+            'Due to highway flyover construction along Koramangala Outer Ring Road, Bus #14 (Morning School Express) will depart 10 minutes earlier starting Monday. Real-time RFID card entry and exit notifications remain operational on your mobile app.',
+        senderName: 'Transport Department',
+        senderRole: 'Campus Fleet & Safety Division',
+        senderDepartment: 'Transport Office',
+        senderPhone: '+91 80 2345 6788',
+        senderType: NotificationSenderType.authority,
+        timestamp: DateTime.now().subtract(const Duration(days: 2)),
+        priority: NotificationPriority.info,
+        isRead: true,
+      ),
+      ParentNotificationMessage(
+        id: 'notif_7',
+        title: 'Medical Leave Sanctioned (Viral Fever)',
+        message:
+            'Medical leave application (leave_101) for viral fever (14 Nov – 16 Nov) has been validated by the medical officer and officially approved. On-Duty attendance credit for 6 missed classes has been recorded in the central ERP.',
+        senderName: 'Dean of Student Affairs',
+        senderRole: 'Student Welfare & Leave Sanctioning Authority',
+        senderDepartment: 'Academic Affairs Council',
+        senderType: NotificationSenderType.authority,
+        childId: 'child_1',
+        childName: 'Aarav Boora',
+        timestamp: DateTime.now().subtract(const Duration(days: 3)),
+        priority: NotificationPriority.info,
+        actionLabel: 'View Leave Record',
+        actionRoute: 'leaves',
+        isRead: true,
+      ),
+    ]);
 
     _startTransitTimer();
   }

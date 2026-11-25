@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../Theme/app_theme.dart';
+import '../../../Widgets/app_snack_bar.dart';
 import '../Controllers/parent_controller.dart';
 import '../Models/parent_models.dart';
 import 'google_bus_map_widget.dart';
@@ -97,29 +98,6 @@ class _FullscreenOnlyMapViewState extends State<FullscreenOnlyMapView>
     });
 
     _flyAnimationController!.forward();
-
-    // Floating notification feedback
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.my_location_rounded, color: Color(0xFF2DD4BF), size: 18),
-            const SizedBox(width: 8),
-            Text(
-              'Focused on Bus ${transit.busNumber} • Live Street View',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-          ],
-        ),
-        duration: const Duration(milliseconds: 1400),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF0F172A).withValues(alpha: 0.92),
-        margin: const EdgeInsets.only(bottom: 120, left: 30, right: 30),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-    );
   }
 
   void _zoomIn() {
@@ -161,7 +139,7 @@ class _FullscreenOnlyMapViewState extends State<FullscreenOnlyMapView>
     final transit = controller.childTransit(widget.child.id) ?? widget.initialTransit;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF12161A) : const Color(0xFFF1F5F9),
+      backgroundColor: isDark ? const Color(0xFF050505) : const Color(0xFFF1F5F9),
       body: Stack(
         children: [
           // 1. FULLSCREEN ONLY LIVE MAP (Real Interactive Google Map - Free API)
@@ -291,7 +269,7 @@ class _FullscreenOnlyMapViewState extends State<FullscreenOnlyMapView>
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0F766E).withValues(alpha: 0.94),
+                    color: const Color(0xFF2DD4BF).withValues(alpha: 0.94),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: const Color(0xFF34D399), width: 1.4),
                     boxShadow: [
@@ -378,7 +356,7 @@ class _FullscreenOnlyMapViewState extends State<FullscreenOnlyMapView>
                   onTap: () => _flyToBusLocation(transit),
                   tooltip: 'Zoom into Live Bus Location',
                   isDark: isDark,
-                  iconColor: const Color(0xFF0F766E),
+                  iconColor: const Color(0xFF2DD4BF),
                 ),
                 const SizedBox(height: 8),
 
@@ -486,7 +464,7 @@ class _FullscreenOnlyMapViewState extends State<FullscreenOnlyMapView>
                         ),
                         decoration: BoxDecoration(
                           color: transit.isReached
-                              ? const Color(0xFF0F766E)
+                              ? const Color(0xFF2DD4BF)
                               : AppTheme.surface(context),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
@@ -555,7 +533,7 @@ class _FullscreenOnlyMapViewState extends State<FullscreenOnlyMapView>
     bool isDark = false,
   }) {
     final bg = backgroundColor ?? ((isDark ? const Color(0xFF18181B) : Colors.white).withValues(alpha: 0.95));
-    final fg = iconColor ?? (isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0F766E));
+    final fg = iconColor ?? const Color(0xFF2DD4BF);
 
     return GestureDetector(
       onTap: onTap,

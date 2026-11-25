@@ -145,7 +145,7 @@ class _ParentNameVerificationScreenState
               child: Icon(
                 Icons.supervised_user_circle_rounded,
                 size: 44,
-                color: Color(0xFF0F766E),
+                color: Color(0xFF2DD4BF),
               ),
             ),
           ),
@@ -155,7 +155,7 @@ class _ParentNameVerificationScreenState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F766E).withValues(alpha: 0.10),
+              color: const Color(0xFF2DD4BF).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -164,7 +164,7 @@ class _ParentNameVerificationScreenState
                 const Icon(
                   Icons.verified_rounded,
                   size: 15,
-                  color: Color(0xFF0D9488),
+                  color: Color(0xFF2DD4BF),
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -173,7 +173,7 @@ class _ParentNameVerificationScreenState
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.1,
-                    color: const Color(0xFF0D9488),
+                    color: const Color(0xFF2DD4BF),
                   ),
                 ),
               ],
@@ -282,7 +282,7 @@ class _ParentNameVerificationScreenState
                 border: InputBorder.none,
                 prefixIcon: const Icon(
                   Icons.person_outline_rounded,
-                  color: Color(0xFF0F766E),
+                  color: Color(0xFF2DD4BF),
                   size: 22,
                 ),
                 hintText: 'e.g. Rajesh Sharma / Boora Raviteja',
@@ -319,7 +319,7 @@ class _ParentNameVerificationScreenState
               const Icon(
                 Icons.info_outline_rounded,
                 size: 14,
-                color: Color(0xFF0F766E),
+                color: Color(0xFF2DD4BF),
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -344,7 +344,7 @@ class _ParentNameVerificationScreenState
             child: ElevatedButton(
               onPressed: _handleFindChildren,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0F766E),
+                backgroundColor: const Color(0xFF2DD4BF),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -474,7 +474,7 @@ class _ParentNameVerificationScreenState
             child: ElevatedButton(
               onPressed: _handleConfirmChildren,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0F766E),
+                backgroundColor: const Color(0xFF2DD4BF),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -575,14 +575,14 @@ class _ParentNameVerificationScreenState
             children: [
               CircleAvatar(
                 radius: 26,
-                backgroundColor: const Color(0xFF0F766E).withValues(alpha: 0.15),
+                backgroundColor: const Color(0xFF2DD4BF).withValues(alpha: 0.15),
                 backgroundImage: NetworkImage(avatarUrl),
                 onBackgroundImageError: (_, __) {},
                 child: Text(
                   name.isNotEmpty ? name[0] : 'S',
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF0F766E),
+                    color: const Color(0xFF2DD4BF),
                   ),
                 ),
               ),
@@ -656,7 +656,7 @@ class _ParentNameVerificationScreenState
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.badge_outlined, size: 14, color: Color(0xFF0F766E)),
+                    const Icon(Icons.badge_outlined, size: 14, color: Color(0xFF2DD4BF)),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -675,7 +675,7 @@ class _ParentNameVerificationScreenState
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.school_outlined, size: 14, color: Color(0xFF0F766E)),
+                    const Icon(Icons.school_outlined, size: 14, color: Color(0xFF2DD4BF)),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(

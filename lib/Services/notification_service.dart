@@ -111,9 +111,9 @@ class NotificationService {
 
     const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
 
     const InitializationSettings initializationSettings = InitializationSettings(
@@ -142,6 +142,38 @@ class NotificationService {
     }
 
     _initialized = true;
+  }
+
+  /// Requests native OS notification permissions on Android 13+ and iOS.
+  Future<bool> requestPlatformPermissions() async {
+    await init();
+    bool granted = true;
+
+    final androidPlugin = _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      final res = await androidPlugin.requestNotificationsPermission();
+      if (res != null) {
+        granted = res;
+      }
+    }
+
+    final iosPlugin = _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+    if (iosPlugin != null) {
+      final res = await iosPlugin.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      if (res != null) {
+        granted = granted && res;
+      }
+    }
+
+    return granted;
   }
 
   Future<void> _createChannels() async {

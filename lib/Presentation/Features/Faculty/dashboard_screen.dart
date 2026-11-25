@@ -393,7 +393,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                                       style: GoogleFonts.jetBrainsMono(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
-                                        color: isDark ? const Color(0xFF00D2B4) : const Color(0xFF0D9488),
+                                        color: const Color(0xFF2DD4BF),
                                         letterSpacing: 0.5,
                                       ),
                                     ),

@@ -45,8 +45,8 @@ class _ParentLeavesTabState extends State<ParentLeavesTab> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => ApplyLeaveBottomSheet.show(context),
-        backgroundColor: const Color(0xFF0F766E),
-        foregroundColor: Colors.white,
+        backgroundColor: const Color(0xFF2DD4BF),
+        foregroundColor: Colors.black,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Apply Leave', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
@@ -65,7 +65,7 @@ class _ParentLeavesTabState extends State<ParentLeavesTab> {
                     label: Text(filter),
                     selected: isSelected,
                     onSelected: (_) => setState(() => _selectedFilter = filter),
-                    selectedColor: const Color(0xFF0F766E).withValues(alpha: 0.15),
+                    selectedColor: const Color(0xFF2DD4BF).withValues(alpha: 0.18),
                     checkmarkColor: const Color(0xFF2DD4BF),
                     labelStyle: TextStyle(
                       fontSize: 12,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:intelli_attend_faculty/Services/haptic_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -43,16 +42,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _scrollController.dispose();
     _controller.dispose();
     super.dispose();
-  }
-
-  void _openConversation(ChatConversation conversation) {
-    final controller = context.read<ChatListController>();
-    controller.markConversationRead(conversation.id);
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ChatScreen(conversation: conversation),
-      ),
-    );
   }
 
   @override

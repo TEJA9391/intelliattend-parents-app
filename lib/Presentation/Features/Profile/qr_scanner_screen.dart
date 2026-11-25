@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intelli_attend_faculty/Services/haptic_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:intelli_attend_faculty/Services/permission_service.dart';
 import 'package:intelli_attend_faculty/Theme/app_theme.dart';
 
 class QRScannerScreen extends StatefulWidget {
@@ -33,6 +34,17 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         BarcodeFormat.pdf417,
       ],
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final granted = await PermissionService().ensureFeaturePermission(
+        context,
+        AppPermissionType.camera,
+        featureName: 'QR Scanner',
+      );
+      if (granted && mounted) {
+        _cameraController?.start();
+      }
+    });
   }
 
   @override
@@ -94,11 +106,30 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        "Grant camera permission in settings\nto scan student & faculty cards.",
+                        "Allow camera permission to scan\nstudent & faculty QR codes.",
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(color: Colors.white54, fontSize: 14),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final granted = await PermissionService()
+                              .ensureFeaturePermission(
+                            context,
+                            AppPermissionType.camera,
+                            featureName: 'QR Scanner',
+                          );
+                          if (granted && mounted) {
+                            _cameraController?.start();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2DD4BF),
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('Allow Camera'),
                       ),
                     ],
                   ),

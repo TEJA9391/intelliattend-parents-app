@@ -13,24 +13,28 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
   final TextEditingController _searchController = TextEditingController();
   final List<Map<String, String>> _faqs = [
     {
-      "question": "How do I take attendance?",
-      "answer": "Navigate to the Dashboard, select your class, and click 'Go Live' to start the QR-based attendance session. Students can then scan the code from their app."
+      "question": "How do I check my ward's attendance?",
+      "answer": "Open the Attendance tab to see overall percentage, 75% exam hall ticket eligibility, and period-by-period class status in real time."
     },
     {
-      "question": "Can I edit attendance later?",
-      "answer": "Yes, go to the 'Reports' section, select the class date, and you can manually toggle the attendance status of any student."
+      "question": "How does the live bus tracking work?",
+      "answer": "When your ward taps their RFID card upon boarding the college bus, the live GPS map pulses and shows real-time bus location, stop progress, and arrival estimates."
     },
     {
-      "question": "What if a student doesn't have a phone?",
-      "answer": "You can manually mark them as present using the 'Manual Entry' option within the live session or later in the reports."
+      "question": "How do I apply for student leave?",
+      "answer": "Tap 'Apply Leave' on the Home screen or Leaves tab, select the date range, choose the category, provide a reason, and submit directly for faculty advisor approval."
     },
     {
-      "question": "How do I sync offline data?",
-      "answer": "The app automatically syncs when it detects an internet connection. You can also trigger a manual sync from the Profile -> Sync Settings."
+      "question": "How do I contact my child's class advisor?",
+      "answer": "Tap 'Call Mentor' on the student card or visit the 'Faculty Mentors' tab under Notices to view contact details, make phone calls, or send emails."
     },
     {
-      "question": "Is my data secure?",
-      "answer": "We use end-to-end encryption for all attendance records. Biometric login is also enforced for faculty access."
+      "question": "What is the 75% attendance rule?",
+      "answer": "University regulations require at least 75% overall attendance to be eligible for semester end exams and hall ticket issuance. The app calculates your safe absence margin automatically."
+    },
+    {
+      "question": "How do I switch between multiple children?",
+      "answer": "Tap the ward pills (e.g. Aarav / Ananya) at the top of the Home or Profile tabs to toggle between your enrolled wards instantly."
     },
   ];
 
@@ -143,10 +147,10 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
 
   Widget _buildCategoriesGrid() {
     final categories = [
-      {"icon": Icons.account_circle_outlined, "name": "Account"},
       {"icon": Icons.qr_code_scanner_rounded, "name": "Attendance"},
-      {"icon": Icons.analytics_outlined, "name": "Analytics"},
-      {"icon": Icons.security_rounded, "name": "Security"},
+      {"icon": Icons.directions_bus_rounded, "name": "Bus Transit"},
+      {"icon": Icons.edit_calendar_rounded, "name": "Leave Request"},
+      {"icon": Icons.family_restroom_rounded, "name": "Profile"},
     ];
 
     return GridView.builder(

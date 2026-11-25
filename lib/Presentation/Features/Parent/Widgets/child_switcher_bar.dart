@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../Theme/app_theme.dart';
+import '../../../Widgets/app_snack_bar.dart';
 import '../Controllers/parent_controller.dart';
 import '../Models/parent_models.dart';
 
@@ -38,20 +39,17 @@ class ChildSwitcherBar extends StatelessWidget {
           final isSelected = child.id == activeId;
           return Expanded(
             child: GestureDetector(
-              onTap: () => controller.switchChild(child.id),
+              onTap: () {
+                if (child.id != activeId) {
+                  controller.switchChild(child.id);
+                }
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  gradient: isSelected
-                      ? const LinearGradient(
-                          colors: [Color(0xFF0F766E), Color(0xFF14B8A6)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
-                  color: isSelected ? null : Colors.transparent,
+                  color: isSelected ? const Color(0xFF2DD4BF) : Colors.transparent,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Row(
@@ -60,14 +58,14 @@ class ChildSwitcherBar extends StatelessWidget {
                     CircleAvatar(
                       radius: 14,
                       backgroundColor: isSelected
-                          ? Colors.white.withValues(alpha: 0.2)
+                          ? Colors.black.withValues(alpha: 0.12)
                           : AppTheme.surface(context),
                       child: Text(
                         child.name.isNotEmpty ? child.name[0] : 'S',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.white : AppTheme.text(context),
+                          color: isSelected ? Colors.black : AppTheme.text(context),
                         ),
                       ),
                     ),
@@ -87,7 +85,7 @@ class ChildSwitcherBar extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                                    color: isSelected ? Colors.white : AppTheme.text(context),
+                                    color: isSelected ? Colors.black : AppTheme.text(context),
                                   ),
                                 ),
                               ),
@@ -107,7 +105,7 @@ class ChildSwitcherBar extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 10,
                               color: isSelected
-                                  ? Colors.white.withValues(alpha: 0.8)
+                                  ? Colors.black.withValues(alpha: 0.6)
                                   : AppTheme.textSecondary(context),
                             ),
                           ),

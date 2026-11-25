@@ -56,6 +56,8 @@ class ChildProfile {
     );
   }
 
+  String get department => program;
+
   Color get attendanceColor {
     if (overallAttendance >= 75.0) {
       return const Color(0xFF2DD4BF); // Teal Green
@@ -74,6 +76,151 @@ class ChildProfile {
     } else {
       return 'Critical Defaulter';
     }
+  }
+}
+
+/// Comprehensive Student Health & Medical ID Record (Apple Health Style)
+class StudentHealthRecord {
+  final String childId;
+  final String bloodGroup;
+  final String allergies;
+  final String chronicConditions;
+  final String dailyMedications;
+  final String criticalDirectives;
+  final String insuranceProvider;
+  final String insurancePolicyNumber;
+  final String campusClinicOpdId;
+  final String primaryDoctorName;
+  final String primaryDoctorPhone;
+  final String preferredHospital;
+  final bool isOrganDonor;
+  final String dietaryNeeds;
+  final String heightCm;
+  final String weightKg;
+  final String sensoryAids;
+
+  const StudentHealthRecord({
+    required this.childId,
+    this.bloodGroup = '',
+    this.allergies = '',
+    this.chronicConditions = '',
+    this.dailyMedications = '',
+    this.criticalDirectives = '',
+    this.insuranceProvider = '',
+    this.insurancePolicyNumber = '',
+    this.campusClinicOpdId = '',
+    this.primaryDoctorName = '',
+    this.primaryDoctorPhone = '',
+    this.preferredHospital = '',
+    this.isOrganDonor = false,
+    this.dietaryNeeds = '',
+    this.heightCm = '',
+    this.weightKg = '',
+    this.sensoryAids = '',
+  });
+
+  bool get isEmpty =>
+      bloodGroup.trim().isEmpty &&
+      allergies.trim().isEmpty &&
+      chronicConditions.trim().isEmpty &&
+      dailyMedications.trim().isEmpty &&
+      criticalDirectives.trim().isEmpty &&
+      insuranceProvider.trim().isEmpty &&
+      insurancePolicyNumber.trim().isEmpty &&
+      campusClinicOpdId.trim().isEmpty &&
+      primaryDoctorName.trim().isEmpty &&
+      primaryDoctorPhone.trim().isEmpty &&
+      preferredHospital.trim().isEmpty &&
+      dietaryNeeds.trim().isEmpty &&
+      heightCm.trim().isEmpty &&
+      weightKg.trim().isEmpty &&
+      sensoryAids.trim().isEmpty;
+
+  Map<String, dynamic> toJson() => {
+        'child_id': childId,
+        'blood_group': bloodGroup,
+        'allergies': allergies,
+        'chronic_conditions': chronicConditions,
+        'daily_medications': dailyMedications,
+        'critical_directives': criticalDirectives,
+        'insurance_provider': insuranceProvider,
+        'insurance_policy_number': insurancePolicyNumber,
+        'campus_clinic_opd_id': campusClinicOpdId,
+        'primary_doctor_name': primaryDoctorName,
+        'primary_doctor_phone': primaryDoctorPhone,
+        'preferred_hospital': preferredHospital,
+        'is_organ_donor': isOrganDonor,
+        'dietary_needs': dietaryNeeds,
+        'height_cm': heightCm,
+        'weight_kg': weightKg,
+        'sensory_aids': sensoryAids,
+      };
+
+  factory StudentHealthRecord.fromJson(
+      String childId, Map<String, dynamic> json) {
+    String str(String a, [String? b]) =>
+        (json[a] ?? (b != null ? json[b] : null) ?? '').toString().trim();
+    return StudentHealthRecord(
+      childId: childId,
+      bloodGroup: str('blood_group', 'bloodGroup'),
+      allergies: str('allergies'),
+      chronicConditions: str('chronic_conditions', 'chronicConditions'),
+      dailyMedications: str('daily_medications', 'dailyMedications'),
+      criticalDirectives: str('critical_directives', 'criticalDirectives'),
+      insuranceProvider: str('insurance_provider', 'insuranceProvider'),
+      insurancePolicyNumber:
+          str('insurance_policy_number', 'insurancePolicyNumber'),
+      campusClinicOpdId: str('campus_clinic_opd_id', 'campusClinicOpdId'),
+      primaryDoctorName: str('primary_doctor_name', 'primaryDoctorName'),
+      primaryDoctorPhone: str('primary_doctor_phone', 'primaryDoctorPhone'),
+      preferredHospital: str('preferred_hospital', 'preferredHospital'),
+      isOrganDonor:
+          json['is_organ_donor'] == true || json['isOrganDonor'] == true,
+      dietaryNeeds: str('dietary_needs', 'dietaryNeeds'),
+      heightCm: str('height_cm', 'heightCm'),
+      weightKg: str('weight_kg', 'weightKg'),
+      sensoryAids: str('sensory_aids', 'sensoryAids'),
+    );
+  }
+
+  StudentHealthRecord copyWith({
+    String? childId,
+    String? bloodGroup,
+    String? allergies,
+    String? chronicConditions,
+    String? dailyMedications,
+    String? criticalDirectives,
+    String? insuranceProvider,
+    String? insurancePolicyNumber,
+    String? campusClinicOpdId,
+    String? primaryDoctorName,
+    String? primaryDoctorPhone,
+    String? preferredHospital,
+    bool? isOrganDonor,
+    String? dietaryNeeds,
+    String? heightCm,
+    String? weightKg,
+    String? sensoryAids,
+  }) {
+    return StudentHealthRecord(
+      childId: childId ?? this.childId,
+      bloodGroup: bloodGroup ?? this.bloodGroup,
+      allergies: allergies ?? this.allergies,
+      chronicConditions: chronicConditions ?? this.chronicConditions,
+      dailyMedications: dailyMedications ?? this.dailyMedications,
+      criticalDirectives: criticalDirectives ?? this.criticalDirectives,
+      insuranceProvider: insuranceProvider ?? this.insuranceProvider,
+      insurancePolicyNumber: insurancePolicyNumber ?? this.insurancePolicyNumber,
+      campusClinicOpdId: campusClinicOpdId ?? this.campusClinicOpdId,
+      primaryDoctorName: primaryDoctorName ?? this.primaryDoctorName,
+      primaryDoctorPhone: primaryDoctorPhone ?? this.primaryDoctorPhone,
+      preferredHospital: preferredHospital ?? this.preferredHospital,
+      isOrganDonor: isOrganDonor ?? this.isOrganDonor,
+      dietaryNeeds: dietaryNeeds ?? this.dietaryNeeds,
+      heightCm: heightCm ?? this.heightCm,
+      weightKg: weightKg ?? this.weightKg,
+      sensoryAids: sensoryAids ?? this.sensoryAids,
+    );
   }
 }
 
@@ -537,6 +684,122 @@ class StudentBusTransit {
         return 'Reached School • Bus Stopped';
       case TransitStage.reachedHome:
         return 'Reached Home • Bus Stopped';
+    }
+  }
+}
+
+/// Type of sender for campus notifications to parents
+enum NotificationSenderType {
+  faculty, // Professors, Mentors, Class Advisors, HODs
+  authority, // Principal, Dean, Exam Cell, Transport, Accounts, Security
+}
+
+/// Urgency / priority level of the notification
+enum NotificationPriority {
+  urgent, // Red badge (defaulter risk, exam deadlines)
+  important, // Amber badge (PTM, attendance warnings)
+  info, // Blue / Teal badge (regular updates, marks, approvals)
+}
+
+/// Represents a notification message sent by faculty or college authorities
+class ParentNotificationMessage {
+  final String id;
+  final String title;
+  final String message;
+  final String senderName;
+  final String senderRole;
+  final String? senderDepartment;
+  final String? senderPhone;
+  final String? senderEmail;
+  final NotificationSenderType senderType;
+  final String? childId;
+  final String? childName;
+  final DateTime timestamp;
+  final NotificationPriority priority;
+  final String? actionLabel;
+  final String? actionRoute;
+  bool isRead;
+  bool isArchived;
+
+  ParentNotificationMessage({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.senderName,
+    required this.senderRole,
+    this.senderDepartment,
+    this.senderPhone,
+    this.senderEmail,
+    required this.senderType,
+    this.childId,
+    this.childName,
+    required this.timestamp,
+    this.priority = NotificationPriority.info,
+    this.actionLabel,
+    this.actionRoute,
+    this.isRead = false,
+    this.isArchived = false,
+  });
+
+  ParentNotificationMessage copyWith({
+    String? id,
+    String? title,
+    String? message,
+    String? senderName,
+    String? senderRole,
+    String? senderDepartment,
+    String? senderPhone,
+    String? senderEmail,
+    NotificationSenderType? senderType,
+    String? childId,
+    String? childName,
+    DateTime? timestamp,
+    NotificationPriority? priority,
+    String? actionLabel,
+    String? actionRoute,
+    bool? isRead,
+    bool? isArchived,
+  }) {
+    return ParentNotificationMessage(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      senderName: senderName ?? this.senderName,
+      senderRole: senderRole ?? this.senderRole,
+      senderDepartment: senderDepartment ?? this.senderDepartment,
+      senderPhone: senderPhone ?? this.senderPhone,
+      senderEmail: senderEmail ?? this.senderEmail,
+      senderType: senderType ?? this.senderType,
+      childId: childId ?? this.childId,
+      childName: childName ?? this.childName,
+      timestamp: timestamp ?? this.timestamp,
+      priority: priority ?? this.priority,
+      actionLabel: actionLabel ?? this.actionLabel,
+      actionRoute: actionRoute ?? this.actionRoute,
+      isRead: isRead ?? this.isRead,
+      isArchived: isArchived ?? this.isArchived,
+    );
+  }
+
+  Color get priorityColor {
+    switch (priority) {
+      case NotificationPriority.urgent:
+        return const Color(0xFFEF4444);
+      case NotificationPriority.important:
+        return const Color(0xFFF59E0B);
+      case NotificationPriority.info:
+        return const Color(0xFF2DD4BF);
+    }
+  }
+
+  String get priorityLabel {
+    switch (priority) {
+      case NotificationPriority.urgent:
+        return 'Urgent';
+      case NotificationPriority.important:
+        return 'Important';
+      case NotificationPriority.info:
+        return 'Notice';
     }
   }
 }

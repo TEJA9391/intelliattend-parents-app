@@ -62,3 +62,8 @@ AGENTS.md
 CLAUDE.md
 CONTRIBUTING.md
 .pre-commit-config.yaml
+
+# Dev screenshots & helper scripts
+*.png
+install.bat
+install.ps1

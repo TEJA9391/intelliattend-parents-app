@@ -18,7 +18,6 @@ import 'package:intelli_attend_faculty/Data/Repositories/attendance_repository.d
 import 'package:intelli_attend_faculty/Data/Repositories/course_repository.dart';
 import 'package:intelli_attend_faculty/Data/Repositories/resource_repository.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Faculty/dashboard_controller.dart';
-import 'package:intelli_attend_faculty/Presentation/Features/Faculty/dashboard_screen.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Resources/resources_controller.dart';
 import 'package:intelli_attend_faculty/Services/persistence_service.dart';
 import 'package:intelli_attend_faculty/Services/faculty_service.dart';
@@ -45,10 +44,12 @@ void main() {
     DeviceOrientation.portraitDown,
   ]);
 
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    systemNavigationBarColor: Colors.white,
+    systemNavigationBarColor: Colors.transparent,
     systemNavigationBarDividerColor: Colors.transparent,
     systemNavigationBarIconBrightness: Brightness.dark,
+    systemNavigationBarContrastEnforced: false,
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
   ));
@@ -226,8 +227,10 @@ class IntelliAttendMaterialApp extends StatelessWidget {
           darkTheme: AppTheme.getTheme(Brightness.dark),
           routes: {
             '/parent': (context) => const ParentMainNavigationScreen(),
-            '/watchman': (context) => const DashboardScreen(),
-            '/login': (context) => const DashboardScreen(),
+            '/login': (context) => UnifiedAuthGate(
+                  persistenceFuture: persistenceFuture,
+                  firebaseReady: firebaseReady,
+                ),
           },
           home: UnifiedAuthGate(persistenceFuture: persistenceFuture, firebaseReady: firebaseReady),
           builder: (context, child) {

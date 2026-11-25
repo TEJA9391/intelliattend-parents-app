@@ -171,7 +171,7 @@ class _CustomSlidingNavBarState extends State<CustomSlidingNavBar> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF14B8A6), Color(0xFF0F766E)],
+                              colors: [Color(0xFF14B8A6), Color(0xFF2DD4BF)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),

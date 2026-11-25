@@ -29,15 +29,6 @@ class ViewProfileScreen extends StatefulWidget {
 class _ViewProfileScreenState extends State<ViewProfileScreen> {
   final MessageCacheService _cache = MessageCacheService.instance;
   final MessagingRepository _repository = MessagingRepository();
-  late bool _muted;
-  late bool _blocked;
-
-  @override
-  void initState() {
-    super.initState();
-    _muted = _cache.isMuted(widget.conversationId);
-    _blocked = _cache.isBlocked(widget.conversationId);
-  }
 
   StudentContact get _peer => widget.peer;
 
@@ -83,11 +74,6 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                   tooltip: 'Voice call',
                   icon: Icon(Icons.call_rounded, color: AppTheme.text(context), size: 22),
                   onPressed: () => _startCall(context, CallType.audio),
-                ),
-                IconButton(
-                  tooltip: 'Video call',
-                  icon: Icon(Icons.videocam_rounded, color: AppTheme.text(context), size: 22),
-                  onPressed: () => _startCall(context, CallType.video),
                 ),
               ],
               flexibleSpace: FlexibleSpaceBar(
@@ -261,31 +247,15 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
 
   Widget _buildContactActions(bool isDark) {
     if (_peer.phone == null) return const SizedBox.shrink();
-    return Row(
-      children: [
-        Expanded(
-          child: _ContactButton(
-            icon: Icons.call_outlined,
-            label: 'Call',
-            color: const Color(0xFF2DD4BF),
-            onTap: () => launchUrl(Uri.parse('tel:${_peer.phone}'), mode: LaunchMode.externalApplication),
-            isDark: isDark,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _ContactButton(
-            icon: Icons.chat_rounded,
-            label: 'WhatsApp',
-            color: const Color(0xFF22C55E),
-            onTap: () => launchUrl(
-              Uri.parse('https://wa.me/${_peer.phone!.replaceAll('+', '').replaceAll(' ', '')}'),
-              mode: LaunchMode.externalApplication,
-            ),
-            isDark: isDark,
-          ),
-        ),
-      ],
+    return _ContactButton(
+      icon: Icons.call_outlined,
+      label: 'Call Faculty',
+      color: const Color(0xFF2DD4BF),
+      onTap: () => launchUrl(
+        Uri.parse('tel:${_peer.phone}'),
+        mode: LaunchMode.externalApplication,
+      ),
+      isDark: isDark,
     );
   }
 
@@ -301,22 +271,6 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
       child: Column(
         children: [
           _SettingsRow(
-            icon: _muted ? Icons.notifications_off_rounded : Icons.notifications_outlined,
-            label: _muted ? 'Unmute notifications' : 'Mute notifications',
-            trailing: Switch(
-              value: _muted,
-              onChanged: (val) async {
-                HapticService.light();
-                await _cache.setMuted(widget.conversationId, val);
-                _repository.setMuted(widget.conversationId, val);
-                setState(() => _muted = val);
-              },
-              activeColor: AppTheme.primary(context),
-            ),
-            isFirst: true,
-            isDark: isDark,
-          ),
-          _SettingsRow(
             icon: Icons.wallpaper_outlined,
             label: 'Wallpaper & Theme',
             trailing: Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary(context), size: 20),
@@ -324,38 +278,453 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
               context,
               conversationId: widget.conversationId,
             ),
+            isFirst: true,
             isDark: isDark,
           ),
           _SettingsRow(
-            icon: Icons.block_rounded,
-            label: _blocked ? 'Unblock contact' : 'Block contact',
-            labelColor: AppTheme.errorRed,
-            trailing: Switch(
-              value: _blocked,
-              onChanged: (val) async {
-                HapticService.light();
-                await _cache.setBlocked(widget.conversationId, val);
-                _repository.setBlocked(widget.conversationId, val);
-                setState(() => _blocked = val);
-              },
-              activeColor: AppTheme.errorRed,
-            ),
-            isDark: isDark,
-          ),
-          _SettingsRow(
-            icon: Icons.flag_outlined,
-            label: 'Report contact',
-            labelColor: AppTheme.errorRed,
-            onTap: () {
-              _repository.reportConversation(widget.conversationId, 'Reported from contact profile');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Thanks — your report was submitted')),
-              );
-            },
+            icon: Icons.report_problem_outlined,
+            label: 'Report Faculty / Grievance',
+            labelColor: const Color(0xFFEF4444),
+            trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEF4444), size: 20),
+            onTap: () => _showReportFacultySheet(context),
             isLast: true,
             isDark: isDark,
           ),
         ],
+      ),
+    );
+  }
+
+  void _showReportFacultySheet(BuildContext context) {
+    HapticService.medium();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final reasons = [
+      'Unprofessional Conduct or Harsh Behavior',
+      'Unfair Academic Evaluation / Grading Concern',
+      'Frequent Absence or Class Lateness',
+      'Unresponsive to Academic Inquiries',
+      'Lack of Homework / Syllabus Guidance',
+      'Other Grievance / Concern',
+    ];
+    String selectedReason = reasons.first;
+    final detailsController = TextEditingController();
+    bool forwardToPrincipal = true;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+            ),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF161B22) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border.all(
+                color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 6),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.report_problem_rounded,
+                          color: Color(0xFFEF4444),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Report Faculty / File Grievance',
+                              style: TextStyle(
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.text(context),
+                              ),
+                            ),
+                            Text(
+                              'Official Parent Confidential Grievance Cell',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: AppTheme.textSecondary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+
+                // Scrollable Form
+                Flexible(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Faculty Info pill
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                                child: Text(
+                                  _peer.name[0],
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFEF4444),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _peer.name,
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.text(context),
+                                      ),
+                                    ),
+                                    Text(
+                                      _peer.department ?? 'Faculty',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppTheme.textSecondary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'CONFIDENTIAL',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFEF4444),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Section 1: Requirement / Reason
+                        Text(
+                          '1. Reason for Reporting *',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.text(context),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        ...reasons.map((r) {
+                          final isSelected = selectedReason == r;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(10),
+                                onTap: () => setModalState(() => selectedReason = r),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? const Color(0xFFEF4444).withValues(alpha: 0.1)
+                                        : (isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFFAFAFA)),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? const Color(0xFFEF4444)
+                                          : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                                      width: isSelected ? 1.4 : 1.0,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isSelected
+                                            ? Icons.radio_button_checked_rounded
+                                            : Icons.radio_button_off_rounded,
+                                        size: 16,
+                                        color: isSelected ? const Color(0xFFEF4444) : AppTheme.textSecondary(context),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          r,
+                                          style: TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                            color: isSelected ? AppTheme.text(context) : AppTheme.textSecondary(context),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+
+                        const SizedBox(height: 14),
+
+                        // Section 2: Incident Details Requirement
+                        Text(
+                          '2. Detailed Incident / Grievance Description *',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.text(context),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: TextField(
+                            controller: detailsController,
+                            maxLines: 4,
+                            maxLength: 500,
+                            style: TextStyle(fontSize: 13, color: AppTheme.text(context)),
+                            decoration: InputDecoration(
+                              hintText: 'Please describe the incident, dates, and specific concerns clearly for the Principal\'s review...',
+                              hintStyle: TextStyle(fontSize: 12, color: AppTheme.textSecondary(context)),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.all(12),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // Section 3: Escalation Checkbox
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Checkbox(
+                              value: forwardToPrincipal,
+                              activeColor: const Color(0xFFEF4444),
+                              onChanged: (v) => setModalState(() => forwardToPrincipal = v ?? true),
+                            ),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setModalState(() => forwardToPrincipal = !forwardToPrincipal),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Forward directly to Principal\'s Office (Dr. Meera Nambiar)',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.text(context),
+                                        ),
+                                      ),
+                                      Text(
+                                        'Your report will remain strictly confidential and will not be shared with the teacher.',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppTheme.textSecondary(context),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Action Buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.of(ctx).pop(),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.textSecondary(context),
+                                  side: BorderSide(color: AppTheme.border(context)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 2,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  final details = detailsController.text.trim();
+                                  if (details.length < 5) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Please enter at least a brief description of the incident.'),
+                                        backgroundColor: Color(0xFFEF4444),
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  Navigator.of(ctx).pop();
+                                  _repository.reportConversation(
+                                    widget.conversationId,
+                                    '[$selectedReason] $details',
+                                  );
+
+                                  final refId = 'GRV-${DateTime.now().millisecondsSinceEpoch % 100000}';
+                                  showDialog(
+                                    context: context,
+                                    builder: (c) => AlertDialog(
+                                      backgroundColor: AppTheme.card(context),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                      title: const Row(
+                                        children: [
+                                          Icon(Icons.check_circle_rounded, color: Color(0xFF2DD4BF), size: 24),
+                                          SizedBox(width: 10),
+                                          Text('Report Submitted', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Your grievance regarding ${_peer.name} has been filed successfully with the School Principal.',
+                                            style: const TextStyle(fontSize: 13, height: 1.4),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF2DD4BF).withValues(alpha: 0.12),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.confirmation_number_outlined, size: 16, color: Color(0xFF2DD4BF)),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  'Grievance ID: $refId',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF2DD4BF),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const Text(
+                                            'The Principal\'s Office will review this discreetly within 24-48 working hours.',
+                                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                                          ),
+                                        ],
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(c).pop(),
+                                          child: const Text('OK', style: TextStyle(color: Color(0xFF2DD4BF), fontWeight: FontWeight.bold)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.send_rounded, size: 16),
+                                label: const Text('Submit Report', style: TextStyle(fontWeight: FontWeight.bold)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFEF4444),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

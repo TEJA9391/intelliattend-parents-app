@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:intelli_attend_faculty/Services/app_update_service.dart';
+import 'package:intelli_attend_faculty/Services/permission_service.dart';
+import '../../Faculty/change_password_screen.dart';
+import '../../Faculty/login_devices_screen.dart';
+import '../../Support/about_app_page.dart';
+import '../../Support/help_center_page.dart';
+import '../../Support/report_issue_page.dart';
 import '../../../../Theme/app_theme.dart';
 import '../../../../Theme/theme_controller.dart';
+import '../../../Widgets/app_snack_bar.dart';
 import '../Controllers/parent_controller.dart';
 import '../Widgets/child_switcher_bar.dart';
-import 'parent_name_verification_screen.dart';
+import '../Widgets/student_photo_viewer_dialog.dart';
+import 'parent_guardian_info_screen.dart';
+import 'student_health_info_screen.dart';
+import 'student_campus_id_full_screen.dart';
+import '../Models/parent_models.dart';
 
 class ParentProfileTab extends StatelessWidget {
   const ParentProfileTab({super.key});
@@ -35,305 +51,480 @@ class ParentProfileTab extends StatelessWidget {
         children: [
           const ChildSwitcherBar(),
 
-          // Digital Student ID Card
+          // Digital Student ID Card (Clean, Sleek Surface with Ring Teal Accents)
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0F766E), Color(0xFF134E4A)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: AppTheme.card(context),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: const Color(0xFF2DD4BF).withValues(alpha: 0.4),
+                color: AppTheme.border(context),
                 width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0F766E).withValues(alpha: 0.35),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
+                  color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.school_rounded, color: Color(0xFF2DD4BF), size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'INTELLIATTEND CAMPUS ID',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
-                            color: Color(0xFF2DD4BF),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        child.bloodGroup,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 32,
-                      backgroundColor: Colors.white.withValues(alpha: 0.18),
-                      child: Text(
-                        child.name[0],
-                        style: const TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(24),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  StudentCampusIdFullScreen.show(context, child,
+                      controller: controller);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Text(
-                            child.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                          Icon(
+                            Icons.school_rounded,
+                            color: isDark
+                                ? const Color(0xFF2DD4BF)
+                                : const Color(0xFF2DD4BF),
+                            size: 20,
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(width: 8),
                           Text(
-                            'Roll No: ${child.rollNumber}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.8),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            child.program,
+                            'INTELLIATTEND VERIFIED',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.white.withValues(alpha: 0.6),
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                              color: isDark
+                                  ? const Color(0xFF2DD4BF)
+                                  : const Color(0xFF2DD4BF),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Class Advisor: ${child.mentorName}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withValues(alpha: 0.8),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              StudentPhotoViewerDialog.show(context, child,
+                                  controller: controller);
+                            },
+                            child: Stack(
+                              alignment: Alignment.bottomRight,
+                              children: [
+                                Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: const Color(0xFF2DD4BF),
+                                      width: 2.2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF2DD4BF)
+                                            .withValues(alpha: 0.3),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipOval(
+                                    child: buildSmartAvatarImage(
+                                        child.avatarUrl,
+                                        width: 64,
+                                        height: 64),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF2DD4BF),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.camera_alt_rounded,
+                                      size: 10, color: Colors.black),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  child.name,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.text(context),
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Roll No: ${child.rollNumber}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark
+                                        ? const Color(0xFF2DD4BF)
+                                        : const Color(0xFF2DD4BF),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  child.program,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppTheme.textSecondary(context),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppTheme.border(context),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Class Advisor: ${child.mentorName}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.textSecondary(context),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Tap card for ID',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark
+                                        ? const Color(0xFF2DD4BF)
+                                        : const Color(0xFF2DD4BF),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 10,
+                                  color: isDark
+                                      ? const Color(0xFF2DD4BF)
+                                      : const Color(0xFF2DD4BF),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      const Icon(Icons.verified_rounded, size: 16, color: Color(0xFF2DD4BF)),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // Guardian Info Section
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Text(
-              'Guardian Information',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.text(context),
               ),
             ),
           ),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.card(context),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppTheme.border(context)),
-            ),
+
+          // Content with clean padding - NO BOXES, NO DIVIDER LINES
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInfoRow(
+                // 1. Guardian & Medical Records
+                _buildSectionHeader(context, 'Guardian & Medical Records'),
+                _buildInteractiveTile(
                   context,
-                  icon: Icons.person_outline_rounded,
-                  label: 'Parent Name',
-                  value: controller.parentName,
+                  icon: Icons.family_restroom_rounded,
+                  title: 'Guardian Information',
+                  subtitle: _buildGuardianSubtitle(controller),
                   onTap: () {
-                    Navigator.of(context).push(
+                    Navigator.push(
+                      context,
                       MaterialPageRoute(
-                        builder: (_) => ParentNameVerificationScreen(
-                          initialName: controller.parentName,
-                          onVerified: (newName) {
-                            controller.setParentName(newName);
-                            Navigator.of(context).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Parent verified as $newName'),
-                                backgroundColor: const Color(0xFF0F766E),
-                              ),
-                            );
-                          },
+                        builder: (_) => ChangeNotifierProvider.value(
+                          value: controller,
+                          child: const ParentGuardianInfoScreen(),
                         ),
                       ),
                     );
                   },
                 ),
-                const Divider(height: 16),
-                _buildInfoRow(context, icon: Icons.phone_outlined, label: 'Primary Contact', value: '+91 98765 43210'),
-                const Divider(height: 16),
-                _buildInfoRow(context, icon: Icons.email_outlined, label: 'Registered Email', value: 'parent.sharma@gmail.com'),
-                const Divider(height: 16),
-                _buildInfoRow(context, icon: Icons.home_outlined, label: 'Residential City', value: 'Bengaluru, Karnataka'),
-              ],
-            ),
-          ),
+                _buildInteractiveTile(
+                  context,
+                  icon: Icons.health_and_safety_rounded,
+                  title: 'Student Health & Medical ID',
+                  subtitle: _buildMedicalSubtitle(
+                      controller.healthRecordForChild(child.id)),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChangeNotifierProvider.value(
+                          value: controller,
+                          child: StudentHealthInfoScreen(child: child),
+                        ),
+                      ),
+                    );
+                  },
+                ),
 
-          // App Settings & Preferences
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            child: Text(
-              'App Preferences',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.text(context),
-              ),
-            ),
-          ),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.card(context),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppTheme.border(context)),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                          size: 20,
-                          color: const Color(0xFF2DD4BF),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Theme Mode',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.text(context),
+                // 2. App Preferences
+                _buildSectionHeader(context, 'App Preferences'),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            isDark
+                                ? Icons.dark_mode_rounded
+                                : Icons.light_mode_rounded,
+                            size: 24,
+                            color: const Color(0xFF2DD4BF),
                           ),
-                        ),
-                      ],
-                    ),
-                    Switch.adaptive(
-                      value: isDark,
-                      activeThumbColor: const Color(0xFF2DD4BF),
-                      onChanged: (val) {
-                        ThemeController.toggle();
+                          const SizedBox(width: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Theme Mode',
+                                style: TextStyle(
+                                  fontSize: 15.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.text(context),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                isDark ? 'Dark Theme' : 'Light Theme',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF2DD4BF),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Switch.adaptive(
+                        value: isDark,
+                        activeThumbColor: const Color(0xFF2DD4BF),
+                        onChanged: (val) {
+                          HapticFeedback.lightImpact();
+                          ThemeController.toggle();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const _DailyAttendanceAlertsTile(),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      AppUpdateService.checkAndPromptUpdate(context,
+                          manual: true);
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: FutureBuilder<AppUpdateInfo>(
+                      future: AppUpdateService.getUpdateInfo(),
+                      builder: (context, snapshot) {
+                        final info = snapshot.data;
+                        final String versionLabel = info != null
+                            ? (info.hasUpdate
+                                ? 'v${info.latestVersion} available • Tap to download'
+                                : 'v${info.currentVersion} (Build ${info.currentBuild}) • Up to date')
+                            : 'Check for latest release';
+
+                        return Row(
+                          children: [
+                            const Icon(
+                              Icons.system_update_rounded,
+                              size: 24,
+                              color: Color(0xFF2DD4BF),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'App Updates',
+                                    style: TextStyle(
+                                      fontSize: 15.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.text(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    versionLabel,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF2DD4BF),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
                       },
                     ),
-                  ],
+                  ),
                 ),
-                const Divider(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.notifications_active_outlined, size: 20, color: Color(0xFF2DD4BF)),
-                        SizedBox(width: 12),
-                        Text(
-                          'Daily Attendance Alerts',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    Switch.adaptive(
-                      value: true,
-                      activeThumbColor: const Color(0xFF2DD4BF),
-                      onChanged: (val) {},
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
 
-          // Campus helplines
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            child: Text(
-              'Campus Support Contacts',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.text(context),
-              ),
-            ),
-          ),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.card(context),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppTheme.border(context)),
-            ),
-            child: Column(
-              children: [
-                _buildEmergencyItem(context, title: 'Academic Office Helpdesk', phone: '+91 80 2345 6789'),
-                const Divider(height: 16),
-                _buildEmergencyItem(context, title: 'Student Health Centre', phone: '+91 80 2345 6700'),
-                const Divider(height: 16),
-                _buildEmergencyItem(context, title: 'Dean of Student Affairs', phone: '+91 80 2345 6750'),
+                // 3. Security & Access
+                _buildSectionHeader(context, 'Security & Access'),
+                _buildInteractiveTile(
+                  context,
+                  icon: Icons.lock_reset_rounded,
+                  title: 'Change Password',
+                  subtitle: 'Update credentials',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ChangePasswordScreen()),
+                  ),
+                ),
+                _buildInteractiveTile(
+                  context,
+                  icon: Icons.devices_other_rounded,
+                  title: 'Login Devices',
+                  subtitle: 'Manage sessions',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const LoginDevicesScreen()),
+                  ),
+                ),
+
+                // 4. Campus Support Contacts
+                _buildSectionHeader(context, 'Campus Support Contacts'),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildEmergencyItem(
+                    context,
+                    title: 'Academic Office Helpdesk',
+                    phone: '+91 80 2345 6789',
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildEmergencyItem(
+                    context,
+                    title: 'Student Health Centre',
+                    phone: '+91 80 2345 6700',
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildEmergencyItem(
+                    context,
+                    title: 'Dean of Student Affairs',
+                    phone: '+91 80 2345 6750',
+                  ),
+                ),
+
+                // 5. Help & Support (Last Section)
+                _buildSectionHeader(context, 'Help & Support'),
+                _buildInteractiveTile(
+                  context,
+                  icon: Icons.info_outline_rounded,
+                  title: 'About IntelliAttend',
+                  subtitle: 'App version & information',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AboutAppPage()),
+                  ),
+                ),
+                _buildInteractiveTile(
+                  context,
+                  icon: Icons.help_outline_rounded,
+                  title: 'Help Center',
+                  subtitle: 'FAQs & Tutorials',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HelpCenterPage()),
+                  ),
+                ),
+                _buildInteractiveTile(
+                  context,
+                  icon: Icons.mail_outline_rounded,
+                  title: 'Report an Issue',
+                  subtitle: 'Submit feedback',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ReportIssuePage()),
+                  ),
+                ),
+
+                const SizedBox(height: 36),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'INTELLIATTEND PARENT PORTAL',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary(context)
+                              .withValues(alpha: 0.5),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '© 2026 IntelliAttend Technologies.\nAll Rights Reserved.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppTheme.textSecondary(context)
+                              .withValues(alpha: 0.35),
+                          fontSize: 10,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -342,50 +533,104 @@ class ParentProfileTab extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(
+  String _buildGuardianSubtitle(ParentController controller) {
+    final parts = [
+      controller.parentName.trim(),
+      controller.parentPhone.trim(),
+    ].where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) {
+      return 'Not synced yet • Tap to add or sync';
+    }
+    return parts.join(' • ');
+  }
+
+  String _buildMedicalSubtitle(StudentHealthRecord record) {
+    final parts = [
+      record.bloodGroup.trim(),
+      record.allergies.trim(),
+      record.chronicConditions.trim(),
+    ].where((p) => p.isNotEmpty).take(2).toList();
+    if (parts.isEmpty) {
+      return 'No medical records yet • Tap to add';
+    }
+    return parts.join(' • ');
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 28, bottom: 16),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: AppTheme.textSecondary(context).withValues(alpha: 0.5),
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInteractiveTile(
     BuildContext context, {
     required IconData icon,
-    required String label,
-    required String value,
-    VoidCallback? onTap,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
   }) {
-    final row = Row(
-      children: [
-        Icon(icon, size: 18, color: const Color(0xFF2DD4BF)),
-        const SizedBox(width: 12),
-        Text(
-          '$label: ',
-          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary(context)),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.text(context),
-            ),
-          ),
-        ),
-        if (onTap != null) ...[
-          const SizedBox(width: 6),
-          Icon(Icons.edit_outlined, size: 14, color: AppTheme.textSecondary(context)),
-        ],
-      ],
-    );
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tealColor =
+        isDark ? const Color(0xFF2DD4BF) : const Color(0xFF2DD4BF);
 
-    if (onTap != null) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: row,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            Icon(icon, color: tealColor, size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppTheme.text(context),
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: tealColor,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppTheme.textSecondary(context).withValues(alpha: 0.3),
+              size: 16,
+            ),
+          ],
         ),
-      );
-    }
-    return row;
+      ),
+    );
   }
 
   Widget _buildEmergencyItem(
@@ -393,26 +638,215 @@ class ParentProfileTab extends StatelessWidget {
     required String title,
     required String phone,
   }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppTheme.text(context),
-          ),
+    final clean = phone.replaceAll(RegExp(r'\s+'), '');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Future<void> launchDialer() async {
+      HapticFeedback.lightImpact();
+      final uri = Uri.parse('tel:$clean');
+      try {
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri);
+        } else {
+          if (context.mounted) {
+            AppSnackBar.showError(context, 'Could not open phone dialer');
+          }
+        }
+      } catch (_) {
+        if (context.mounted) {
+          AppSnackBar.showError(context, 'Could not open phone dialer');
+        }
+      }
+    }
+
+    void copyNumber() {
+      HapticFeedback.mediumImpact();
+      Clipboard.setData(ClipboardData(text: phone));
+      AppSnackBar.showSuccess(
+        context,
+        'Copied $phone to clipboard',
+        icon: Icons.copy_rounded,
+      );
+    }
+
+    return InkWell(
+      onTap: launchDialer,
+      onLongPress: copyNumber,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.text(context),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.phone_in_talk_rounded,
+                  size: 15,
+                  color: isDark
+                      ? const Color(0xFF2DD4BF)
+                      : const Color(0xFF2DD4BF),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  phone,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? const Color(0xFF2DD4BF)
+                        : const Color(0xFF2DD4BF),
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        Text(
-          phone,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2DD4BF),
+      ),
+    );
+  }
+}
+
+class _DailyAttendanceAlertsTile extends StatefulWidget {
+  const _DailyAttendanceAlertsTile();
+
+  @override
+  State<_DailyAttendanceAlertsTile> createState() =>
+      _DailyAttendanceAlertsTileState();
+}
+
+class _DailyAttendanceAlertsTileState
+    extends State<_DailyAttendanceAlertsTile> with WidgetsBindingObserver {
+  final PermissionService _permissionService = PermissionService();
+  bool _alertsEnabled = true;
+  bool _notifGranted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadState();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadState();
+    }
+  }
+
+  Future<void> _loadState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final notifGranted = await Permission.notification.isGranted;
+    final prefEnabled = prefs.getBool('daily_attendance_alerts_enabled') ?? true;
+
+    if (mounted) {
+      setState(() {
+        _notifGranted = notifGranted;
+        _alertsEnabled = prefEnabled && notifGranted;
+      });
+    }
+  }
+
+  Future<void> _toggleAttendanceAlerts(bool val) async {
+    HapticFeedback.lightImpact();
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
+    if (val) {
+      final granted = await _permissionService.ensureFeaturePermission(
+        context,
+        AppPermissionType.notifications,
+        featureName: 'Daily Attendance Alerts',
+      );
+      await prefs.setBool('daily_attendance_alerts_enabled', granted);
+      if (mounted) {
+        setState(() {
+          _notifGranted = granted;
+          _alertsEnabled = granted;
+        });
+      }
+      return;
+    }
+
+    await prefs.setBool('daily_attendance_alerts_enabled', false);
+    if (mounted) {
+      setState(() => _alertsEnabled = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.notifications_active_outlined,
+                  size: 24,
+                  color: Color(0xFF2DD4BF),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Daily Attendance Alerts',
+                        style: TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.text(context),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _notifGranted
+                            ? 'Real-time period & bus push alerts'
+                            : 'Tap to allow device notifications',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF2DD4BF),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          Switch.adaptive(
+            value: _alertsEnabled,
+            activeThumbColor: const Color(0xFF2DD4BF),
+            onChanged: _toggleAttendanceAlerts,
+          ),
+        ],
+      ),
     );
   }
 }

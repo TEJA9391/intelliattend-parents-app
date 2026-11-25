@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intelli_attend_faculty/Services/notification_service.dart';
 import 'package:intelli_attend_faculty/Theme/app_theme.dart';
+import 'notification_detail_screen.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
@@ -119,7 +120,15 @@ class NotificationsScreen extends StatelessWidget {
 
   Widget _buildNotificationTile(BuildContext context, AppNotification notification, NotificationService service) {
     return InkWell(
-      onTap: () => service.markAsRead(notification.id),
+      onTap: () {
+        service.markAsRead(notification.id);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NotificationDetailScreen(notification: notification),
+          ),
+        );
+      },
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(

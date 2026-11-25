@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../../Theme/app_theme.dart';
+import '../../../Widgets/app_snack_bar.dart';
 import '../Controllers/parent_controller.dart';
 import '../Models/parent_models.dart';
 
@@ -33,24 +34,10 @@ class GuardianPortalSheet extends StatelessWidget {
   void _copyToClipboard(BuildContext context, String text, String label) {
     HapticFeedback.lightImpact();
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Color(0xFF2DD4BF), size: 18),
-            const SizedBox(width: 10),
-            Text(
-              '$label copied to clipboard',
-              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF0F172A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+    AppSnackBar.showSuccess(
+      context,
+      '$label copied to clipboard',
+      icon: Icons.copy_rounded,
     );
   }
 
@@ -64,8 +51,16 @@ class GuardianPortalSheet extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF131923) : Colors.white,
+        color: isDark ? const Color(0xFF0A0A0A) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: isDark
+            ? Border(
+                top: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  width: 1,
+                ),
+              )
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.6 : 0.16),
@@ -134,7 +129,9 @@ class GuardianPortalSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      controller.parentName,
+                      controller.parentName.trim().isNotEmpty
+                          ? controller.parentName
+                          : 'Parent Portal',
                       style: GoogleFonts.inter(
                         fontSize: 18.5,
                         fontWeight: FontWeight.w700,
@@ -146,7 +143,9 @@ class GuardianPortalSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${controller.parentName.toLowerCase().replaceAll(RegExp(r'\s+'), '.')}.parent@intelliattend.app',
+                      controller.parentEmail.trim().isNotEmpty
+                          ? controller.parentEmail
+                          : 'Email not synced',
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
@@ -163,30 +162,23 @@ class GuardianPortalSheet extends StatelessWidget {
 
           const SizedBox(height: 28),
 
-          // 3. Clean Info Rows (Matching exact faculty style layout)
-          _buildInfoRow(
-            context: context,
-            isDark: isDark,
-            icon: Icons.badge_outlined,
-            label: 'Guardian ID',
-            value: 'PRNT-2024-8841',
-            onTap: () => _copyToClipboard(context, 'PRNT-2024-8841', 'Guardian ID'),
-          ),
-
+          // 3. Clean Info Rows
           _buildInfoRow(
             context: context,
             isDark: isDark,
             icon: Icons.apartment_rounded,
-            label: 'Institution',
-            value: 'Institute of Technology & Management',
+            label: 'School',
+            value: 'IntelliAttend Public School',
           ),
 
           _buildInfoRow(
             context: context,
             isDark: isDark,
             icon: Icons.work_outline_rounded,
-            label: 'Designation',
-            value: 'Primary Guardian (Parent)',
+            label: 'Relationship',
+            value: controller.guardianRelationship.trim().isNotEmpty
+                ? controller.guardianRelationship
+                : 'Not set',
           ),
 
           _buildInfoRow(
@@ -194,8 +186,16 @@ class GuardianPortalSheet extends StatelessWidget {
             isDark: isDark,
             icon: Icons.phone_iphone_rounded,
             label: 'Registered Mobile',
-            value: '+91 98765 43210',
-            onTap: () => _copyToClipboard(context, '+919876543210', 'Phone Number'),
+            value: controller.parentPhone.trim().isNotEmpty
+                ? controller.parentPhone
+                : 'Not set',
+            onTap: controller.parentPhone.trim().isNotEmpty
+                ? () => _copyToClipboard(
+                      context,
+                      controller.parentPhone.replaceAll(RegExp(r'\s+'), ''),
+                      'Phone Number',
+                    )
+                : null,
           ),
 
           _buildInfoRow(
@@ -251,7 +251,7 @@ class GuardianPortalSheet extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
-                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                color: isDark ? const Color(0xFFA1A1AA) : const Color(0xFF64748B),
               ),
             ),
             const SizedBox(width: 16),

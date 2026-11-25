@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../../Theme/app_theme.dart';
+import '../../../Widgets/app_snack_bar.dart';
 import '../Controllers/parent_controller.dart';
 
 class ApplyLeaveBottomSheet extends StatefulWidget {
@@ -87,24 +88,10 @@ class _ApplyLeaveBottomSheetState extends State<ApplyLeaveBottomSheet> {
 
     Navigator.pop(context);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFF0F766E),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Leave application submitted to Class Advisor.',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-      ),
+    AppSnackBar.showSuccess(
+      context,
+      'Leave application submitted to Class Advisor.',
+      icon: Icons.check_circle_rounded,
     );
   }
 
@@ -148,10 +135,10 @@ class _ApplyLeaveBottomSheetState extends State<ApplyLeaveBottomSheet> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0F766E).withValues(alpha: 0.12),
+                      color: const Color(0xFF2DD4BF).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.edit_calendar_rounded, color: Color(0xFF0F766E), size: 20),
+                    child: const Icon(Icons.edit_calendar_rounded, color: Color(0xFF2DD4BF), size: 20),
                   ),
                   const SizedBox(width: 10),
                   Text(
@@ -231,7 +218,7 @@ class _ApplyLeaveBottomSheetState extends State<ApplyLeaveBottomSheet> {
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.calendar_today_rounded, size: 16, color: Color(0xFF0F766E)),
+                                const Icon(Icons.calendar_today_rounded, size: 16, color: Color(0xFF2DD4BF)),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -272,7 +259,7 @@ class _ApplyLeaveBottomSheetState extends State<ApplyLeaveBottomSheet> {
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.event_available_rounded, size: 16, color: Color(0xFF0F766E)),
+                                const Icon(Icons.event_available_rounded, size: 16, color: Color(0xFF2DD4BF)),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -333,8 +320,8 @@ class _ApplyLeaveBottomSheetState extends State<ApplyLeaveBottomSheet> {
                 child: ElevatedButton(
                   onPressed: _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F766E),
-                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xFF2DD4BF),
+                    foregroundColor: Colors.black,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),

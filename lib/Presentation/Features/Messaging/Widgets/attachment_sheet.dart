@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:intelli_attend_faculty/Services/haptic_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'package:intelli_attend_faculty/Data/Models/Messaging/messaging_models.dart';
+import 'package:intelli_attend_faculty/Services/permission_service.dart';
 import 'package:intelli_attend_faculty/Theme/app_theme.dart';
 
 /// Professional attach sheet with a staggered animated grid of 11 options:
@@ -28,7 +28,7 @@ class _AttachmentSheetState extends State<AttachmentSheet>
     duration: const Duration(milliseconds: 560),
   )..forward();
 
-  static const int _columns = 4;
+  static const int _columns = 3;
 
   @override
   void dispose() {
@@ -39,7 +39,11 @@ class _AttachmentSheetState extends State<AttachmentSheet>
   // ── Picker actions ────────────────────────────────────────────────────
 
   Future<void> _pickCamera() async {
-    final granted = await _ensurePermission(Permission.camera, 'Camera');
+    final granted = await PermissionService().ensureFeaturePermission(
+      context,
+      AppPermissionType.camera,
+      featureName: 'Camera attachments',
+    );
     if (!granted || !mounted) return;
     HapticService.medium();
     final result =
@@ -49,6 +53,12 @@ class _AttachmentSheetState extends State<AttachmentSheet>
   }
 
   Future<void> _pickGallery() async {
+    final granted = await PermissionService().ensureFeaturePermission(
+      context,
+      AppPermissionType.photos,
+      featureName: 'Gallery attachments',
+    );
+    if (!granted || !mounted) return;
     HapticService.medium();
     final results = await ImagePicker().pickMultiImage(imageQuality: 85, maxWidth: 2560);
     if (results.isEmpty || !mounted) return;
@@ -279,57 +289,6 @@ class _AttachmentSheetState extends State<AttachmentSheet>
     );
   }
 
-  // ── Permissions ───────────────────────────────────────────────────────
-
-  Future<bool> _ensurePermission(Permission permission, String label) async {
-    final status = await permission.request();
-    if (status.isGranted) return true;
-    if (mounted) {
-      if (status.isPermanentlyDenied) {
-        await _showSettingsDialog(label);
-      } else {
-        _showPermissionSnack(label);
-      }
-    }
-    return false;
-  }
-
-  Future<void> _showSettingsDialog(String label) {
-    return showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.card(ctx),
-        title: Text('$label permission denied',
-            style: GoogleFonts.inter(
-                color: AppTheme.text(ctx), fontSize: 16, fontWeight: FontWeight.w800)),
-        content: Text(
-          'The $label permission was permanently denied. Enable it in system settings to continue.',
-          style: GoogleFonts.inter(color: AppTheme.textSecondary(ctx), fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Not now', style: TextStyle(color: AppTheme.textSecondary(ctx))),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              openAppSettings();
-            },
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.primary(context)),
-            child: const Text('Open Settings'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPermissionSnack(String label) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label permission is required for attachments')),
-    );
-  }
-
   // ── Helpers ───────────────────────────────────────────────────────────
 
   void _deliver(List<ChatAttachment> attachments) {
@@ -418,15 +377,7 @@ class _AttachmentSheetState extends State<AttachmentSheet>
     final options = <({IconData icon, String label, Color color, VoidCallback onTap})>[
       (icon: Icons.camera_alt_outlined, label: 'Camera', color: const Color(0xFF8B5CF6), onTap: _pickCamera),
       (icon: Icons.photo_library_outlined, label: 'Gallery', color: const Color(0xFF2DD4BF), onTap: _pickGallery),
-      (icon: Icons.picture_as_pdf_outlined, label: 'PDF', color: const Color(0xFFEF4444), onTap: _pickPdf),
-      (icon: Icons.description_outlined, label: 'Document', color: const Color(0xFF3B82F6), onTap: _pickDocument),
-      (icon: Icons.assignment_outlined, label: 'Assignment', color: const Color(0xFF6366F1), onTap: _addAssignment),
-      (icon: Icons.assessment_outlined, label: 'Attendance Report', color: const Color(0xFF10B981), onTap: _addAttendanceReport),
-      (icon: Icons.grid_on_rounded, label: 'Excel', color: const Color(0xFF22C55E), onTap: _pickExcel),
-      (icon: Icons.slideshow_outlined, label: 'PowerPoint', color: const Color(0xFFF97316), onTap: _pickPowerPoint),
-      (icon: Icons.folder_zip_outlined, label: 'ZIP', color: const Color(0xFFEA580C), onTap: _pickZip),
-      (icon: Icons.location_on_outlined, label: 'Location', color: const Color(0xFF0EA5E9), onTap: _shareLocation),
-      (icon: Icons.person_add_alt_1_rounded, label: 'Contact', color: const Color(0xFFEC4899), onTap: _addContact),
+      (icon: Icons.description_outlined, label: 'Documents', color: const Color(0xFF3B82F6), onTap: _pickDocument),
     ];
 
     return SafeArea(

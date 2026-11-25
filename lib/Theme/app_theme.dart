@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
@@ -32,7 +33,7 @@ class AppTheme {
   static Color text(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? darkOnBackground : lightOnBackground;
   static Color textSecondary(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF71717A) : const Color(0xFF64748B);
   static Color border(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFE2E8F0);
-  static Color primary(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? accentTeal : const Color(0xFF14B8A6);
+  static Color primary(BuildContext context) => accentTeal;
   static Color accent(BuildContext context) => accentTeal;
   
   static TextStyle jetBrainsMono({
@@ -56,13 +57,16 @@ class AppTheme {
     final bool isDark = brightness == Brightness.dark;
     
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: isDark ? accentTeal : const Color(0xFF14B8A6),
+      seedColor: accentTeal,
       brightness: brightness,
-      primary: isDark ? accentTeal : const Color(0xFF14B8A6),
+      primary: accentTeal,
       surface: isDark ? darkCard : lightCard,
       onSurface: isDark ? darkOnBackground : lightOnBackground,
       background: isDark ? darkBackground : lightBackground,
       onBackground: isDark ? darkOnBackground : lightOnBackground,
+      surfaceContainerLow: isDark ? const Color(0xFF0A0A0A) : lightSurfaceSubtle,
+      surfaceContainer: isDark ? const Color(0xFF121212) : lightCard,
+      surfaceContainerHigh: isDark ? const Color(0xFF161616) : lightCard,
       outlineVariant: isDark ? darkOutlineVariant : lightOutlineVariant,
       surfaceVariant: isDark ? darkSurfaceVariant : lightSurfaceVariant,
     );
@@ -74,6 +78,14 @@ class AppTheme {
       fontFamily: _interFontFamily,
       scaffoldBackgroundColor: isDark ? darkBackground : lightBackground,
       canvasColor: Colors.transparent,
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: isDark ? const Color(0xFF0A0A0A) : lightBackground,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: isDark ? const Color(0xFF121212) : lightCard,
+        surfaceTintColor: Colors.transparent,
+      ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -130,6 +142,13 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         scrolledUnderElevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        ),
         iconTheme: IconThemeData(color: isDark ? darkOnBackground : lightOnBackground),
         titleTextStyle: GoogleFonts.inter(
           color: isDark ? darkOnBackground : lightOnBackground,

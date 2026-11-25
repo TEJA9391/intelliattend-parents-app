@@ -132,15 +132,24 @@ class _AppDrawerState extends State<AppDrawer> {
                 ValueListenableBuilder<ThemeMode>(
                   valueListenable: ThemeController.themeMode,
                   builder: (context, mode, _) {
-                    final bool isDark = mode == ThemeMode.dark;
+                    final bool effectiveDark =
+                        Theme.of(context).brightness == Brightness.dark;
+                    String subtitle =
+                        "System Default (${effectiveDark ? 'Dark' : 'Light'})";
+                    if (mode == ThemeMode.dark) subtitle = "Dark Mode";
+                    if (mode == ThemeMode.light) subtitle = "Light Mode";
                     return _buildMenuItem(
                       context,
-                      isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                      isDark ? "Switch to Light Mode" : "Switch to Dark Mode",
+                      effectiveDark
+                          ? Icons.light_mode_rounded
+                          : Icons.dark_mode_rounded,
+                      effectiveDark
+                          ? "Switch to Light Mode"
+                          : "Switch to Dark Mode",
                       () {
                         ThemeController.toggle();
                       },
-                      subtitle: "Currently: ${isDark ? 'Dark' : 'Light'}",
+                      subtitle: "Currently: ${effectiveDark ? 'Dark' : 'Light'}",
                     );
                   },
                 ),

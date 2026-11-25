@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../Services/permission_service.dart';
 import '../../../../Theme/app_theme.dart';
 import '../Controllers/parent_controller.dart';
 import '../Models/parent_models.dart';
@@ -129,6 +130,13 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
   /// Opens the live bus location in Google Maps
   Future<void> _openInGoogleMaps() async {
     HapticFeedback.mediumImpact();
+    final allowed = await PermissionService().ensureFeaturePermission(
+      context,
+      AppPermissionType.location,
+      featureName: 'Live Bus Location Map',
+    );
+    if (!allowed || !mounted) return;
+
     final lat = widget.transit.currentLat;
     final lng = widget.transit.currentLng;
     final label = Uri.encodeComponent('${widget.child.name} - School Bus ${widget.transit.busNumber}');
@@ -147,8 +155,15 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
     }
   }
 
-  void _showFullscreenMap(BuildContext context) {
+  Future<void> _showFullscreenMap(BuildContext context) async {
     HapticFeedback.selectionClick();
+    final allowed = await PermissionService().ensureFeaturePermission(
+      context,
+      AppPermissionType.location,
+      featureName: 'Fullscreen Bus Map',
+    );
+    if (!allowed || !context.mounted) return;
+
     final controller = context.read<ParentController>();
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -180,14 +195,14 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
         color: AppTheme.card(context),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: const Color(0xFF2DD4BF).withValues(alpha: 0.35),
-          width: 1.4,
+          color: AppTheme.border(context),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F766E).withValues(alpha: isDark ? 0.35 : 0.12),
-            blurRadius: 22,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -238,57 +253,40 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    'STUDENT ON BUS • LIVE',
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.5,
-                                      color: isDark
-                                          ? const Color(0xFF34D399)
-                                          : const Color(0xFF059669),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                            Flexible(
+                              child: Text(
+                                'STUDENT ON BUS • LIVE',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.5,
+                                  color: isDark
+                                      ? const Color(0xFF34D399)
+                                      : const Color(0xFF059669),
                                 ),
-                                const SizedBox(width: 5),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 5, vertical: 1.5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF59E0B)
-                                        .withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(5),
-                                  ),
-                                  child: Text(
-                                    transit.busNumber,
-                                    style: const TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFFF59E0B),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 1),
-                            Text(
-                              '${widget.child.name} • Pass Verified',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.text(context),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF59E0B)
+                                    .withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Text(
+                                transit.busNumber,
+                                style: const TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFF59E0B),
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -450,7 +448,7 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
                       Positioned.fill(
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0F766E).withValues(alpha: 0.88),
+                            color: const Color(0xFF2DD4BF).withValues(alpha: 0.88),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Center(
@@ -510,7 +508,7 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Big bold ETA and remaining distance
+                // Big bold ETA
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -536,50 +534,52 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            transit.isReached
-                                ? 'Bus arrived • Tap Pass on Bus to exit'
-                                : '${transit.remainingKm.toStringAsFixed(1)} km away • Approaching ${_getNextStopName(transit)}',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
-                              color: AppTheme.textSecondary(context),
+                          if (transit.isReached) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'Bus arrived • Tap Pass on Bus to exit',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.textSecondary(context),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          ],
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: transit.isReached ? 0.22 : 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            transit.isReached ? Icons.check_circle_rounded : Icons.traffic_rounded,
-                            size: 12,
-                            color: const Color(0xFF10B981),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            transit.isReached ? 'STOPPED' : 'Normal Traffic',
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
+                    if (transit.isReached) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              size: 12,
                               color: Color(0xFF10B981),
                             ),
-                          ),
-                        ],
+                            SizedBox(width: 4),
+                            Text(
+                              'STOPPED',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -601,7 +601,7 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
                       CircleAvatar(
                         radius: 20,
                         backgroundColor:
-                            const Color(0xFF0F766E).withValues(alpha: 0.2),
+                            const Color(0xFF2DD4BF).withValues(alpha: 0.2),
                         child: const Icon(
                           Icons.person_rounded,
                           color: Color(0xFF2DD4BF),
@@ -616,18 +616,23 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
                             Text(
                               transit.driverName,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.text(context),
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${transit.busNumber} (${transit.vehiclePlate}) • ⭐ ${transit.driverRating}',
+                              'Bus Driver • ${transit.driverPhone}',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
                                 color: AppTheme.textSecondary(context),
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -665,7 +670,7 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
                       horizontal: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: transit.isReached ? const Color(0xFF0F766E) : AppTheme.card(context),
+                      color: transit.isReached ? const Color(0xFF2DD4BF) : AppTheme.card(context),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: transit.isReached ? const Color(0xFF2DD4BF) : AppTheme.border(context),
@@ -720,13 +725,6 @@ class _ZomatoBusTrackingCardState extends State<ZomatoBusTrackingCard>
         ],
       ),
     );
-  }
-
-  String _getNextStopName(StudentBusTransit transit) {
-    for (final stop in transit.stops) {
-      if (!stop.isCompleted) return stop.name;
-    }
-    return transit.destinationCampus;
   }
 
   Widget _buildJourneyTimeline(

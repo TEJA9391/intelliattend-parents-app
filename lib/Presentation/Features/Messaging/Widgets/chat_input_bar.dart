@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,7 +12,6 @@ import 'package:intelli_attend_faculty/Data/Models/Messaging/messaging_models.da
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/Widgets/attachment_preview_sheet.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/Widgets/attachment_sheet.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/Widgets/chat_theme.dart';
-import 'package:intelli_attend_faculty/Presentation/Features/Messaging/Widgets/emoji_picker_panel.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/Widgets/voice_recorder.dart';
 import 'package:intelli_attend_faculty/Theme/app_theme.dart';
 
@@ -74,7 +72,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
       onSend: (path, {durationMs}) =>
           widget.onSendVoice(path, durationMs: durationMs),
     )..addListener(_onVoiceChanged);
-    _undoHistory = UndoHistoryController()..addListener(_onUndoChanged);
+    _undoHistory = UndoHistoryController();
   }
 
   void _onVoiceChanged() {
@@ -83,10 +81,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
       _voiceRecordingWasOn = recording;
       widget.onVoiceRecording?.call(recording);
     }
-    if (mounted) setState(() {});
-  }
-
-  void _onUndoChanged() {
     if (mounted) setState(() {});
   }
 
@@ -103,15 +97,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
   void dispose() {
     _voice.removeListener(_onVoiceChanged);
     _voice.dispose();
-    _undoHistory.removeListener(_onUndoChanged);
     _undoHistory.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
   bool get _hasText => widget.controller.text.trim().isNotEmpty;
-
-  String get _text => widget.controller.text;
 
   // ── Sending ───────────────────────────────────────────────────────────
 
@@ -122,6 +113,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
     widget.controller.clear();
     widget.onTextChanged('');
     setState(() {});
+    // Keep keyboard open continuously for fast multi-message replies
+    _focusNode.requestFocus();
   }
 
   void _notifyChanged(String value) {
@@ -144,28 +137,28 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 
   Widget _micControl(BuildContext context) {
-    final recording = _voice.isRecording;
     final accent = ChatThemeScope.accentOf(context);
     return GestureDetector(
-      onLongPressStart: (_) async => await _beginVoice(),
-      onLongPressEnd: (_) => _voice.endHold(),
-      onLongPressCancel: () => _voice.endHold(),
-      onHorizontalDragUpdate: (d) => _voice.updateSlide(d.delta.dx),
-      onHorizontalDragEnd: (_) => _voice.endHold(),
-      onHorizontalDragCancel: () => _voice.endHold(),
-      onTap: () async {
-        if (recording) {
-          _voice.endHold();
-        } else {
-          await _beginVoice();
-        }
-      },
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Icon(
-          recording ? Icons.mic_rounded : Icons.mic_rounded,
-          color: recording ? accent : AppTheme.textSecondary(context),
-          size: 26,
+      onTap: _beginVoice,
+      onLongPressStart: (_) => _beginVoice(),
+      child: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: accent,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.14),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.mic_rounded,
+          color: Colors.white,
+          size: 23,
         ),
       ),
     );
@@ -193,38 +186,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
       localPath: result.path,
       sizeBytes: file.lengthSync(),
     ));
-  }
-
-  // ── Paste / undo / redo / mention ─────────────────────────────
-
-  Future<void> _paste() async {
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    final text = data?.text;
-    if (text == null || text.isEmpty) return;
-    final controller = widget.controller;
-    final sel = controller.selection;
-    final start = sel.isValid ? sel.start : controller.text.length;
-    final end = sel.isValid ? sel.end : start;
-    final newText = controller.text.replaceRange(start, end, text);
-    controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: start + text.length),
-    );
-    _notifyChanged(newText);
-  }
-
-  void _insertMention() {
-    final controller = widget.controller;
-    final pos = controller.selection.isValid
-        ? controller.selection.extentOffset
-        : controller.text.length;
-    final newText = controller.text.replaceRange(pos, pos, '@');
-    controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: pos + 1),
-    );
-    _notifyChanged(newText);
-    _focusNode.requestFocus();
   }
 
   /// Returns the start index + query of the active `@mention` (the last
@@ -291,7 +252,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
   @override
   Widget build(BuildContext context) {
     final accent = ChatThemeScope.accentOf(context);
-    final dark = ChatThemeScope.isDarkOf(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final glass = ChatThemeScope.glassOf(context);
     final mention = _activeMention();
     final mentionQuery = (mention?.$2 ?? '').trim().toLowerCase();
@@ -320,42 +281,56 @@ class _ChatInputBarState extends State<ChatInputBar> {
       );
     }
 
-    final bar = Container(
-      color: glass
-          ? AppTheme.card(context).withValues(alpha: dark ? 0.55 : 0.62)
-          : AppTheme.card(context),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (widget.replyTarget != null)
-            _ReplyChip(reply: widget.replyTarget!, onCancel: widget.onClearReply),
-          if (_voice.isRecording)
-            VoiceRecordingBar(controller: _voice),
-          if (_voice.isPreviewing)
-            VoicePreviewBar(controller: _voice),
+    final pillBg = isDark
+        ? const Color(0xFF1F2C34).withValues(alpha: glass ? 0.92 : 1.0)
+        : Colors.white.withValues(alpha: glass ? 0.95 : 1.0);
+    final pillTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final pillSecondaryColor =
+        isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final pillBorderColor = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : const Color(0xFFE2E8F0);
+
+    final bar = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.replyTarget != null)
+          _ReplyChip(reply: widget.replyTarget!, onCancel: widget.onClearReply),
+        if (_voice.isRecording)
+          VoiceRecordingBar(controller: _voice)
+        else if (_voice.isPreviewing)
+          VoicePreviewBar(controller: _voice)
+        else ...[
           if (mention != null && mentionList.isNotEmpty)
             _MentionPanel(
               suggestions: mentionList,
               onSelect: _selectMention,
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 6, 4, 4),
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _roundIcon(
-                  context,
-                  tooltip: 'Attach',
-                  icon: Icons.add_rounded,
-                  color: AppTheme.textSecondary(context),
-                  iconSize: 26,
-                  onTap: _openAttachmentSheet,
-                ),
+                // WhatsApp-style floating rounded pill: [Message ...  📎  📷]
                 Expanded(
-                  child: _voice.isRecording
-                      ? const SizedBox.shrink()
-                      : Padding(
-                          padding: const EdgeInsets.only(top: 3),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: pillBg,
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(color: pillBorderColor, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black
+                              .withValues(alpha: isDark ? 0.25 : 0.06),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
                           child: TextField(
                             controller: widget.controller,
                             focusNode: _focusNode,
@@ -364,153 +339,105 @@ class _ChatInputBarState extends State<ChatInputBar> {
                             onTapOutside: (_) => _focusNode.unfocus(),
                             maxLines: 6,
                             minLines: 1,
+                            cursorColor: accent,
                             textCapitalization: TextCapitalization.sentences,
                             style: GoogleFonts.inter(
-                                color: AppTheme.text(context), fontSize: 14.5, height: 1.3),
+                              color: pillTextColor,
+                              fontSize: 15,
+                              height: 1.3,
+                            ),
                             decoration: InputDecoration(
                               hintText: 'Message',
                               hintStyle: GoogleFonts.inter(
-                                  color: AppTheme.textSecondary(context), fontSize: 14.5),
-                              filled: true,
-                              fillColor: AppTheme.surface(context),
+                                color: pillSecondaryColor,
+                                fontSize: 15,
+                              ),
+                              filled: false,
+                              fillColor: Colors.transparent,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
                               isDense: true,
                               contentPadding:
-                                  const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(24),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(24),
-                                borderSide: BorderSide(color: accent, width: 1.2),
-                              ),
+                                  const EdgeInsets.fromLTRB(18, 12, 4, 12),
                             ),
                           ),
                         ),
+                        IconButton(
+                          tooltip: 'Attach',
+                          icon: Icon(
+                            Icons.attach_file_rounded,
+                            color: pillSecondaryColor,
+                            size: 22,
+                          ),
+                          onPressed: _openAttachmentSheet,
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(
+                              minWidth: 38, minHeight: 46),
+                        ),
+                        if (!_hasText)
+                          IconButton(
+                            tooltip: 'Camera',
+                            icon: Icon(
+                              Icons.camera_alt_rounded,
+                              color: pillSecondaryColor,
+                              size: 22,
+                            ),
+                            onPressed: _openCamera,
+                            padding: const EdgeInsets.only(
+                                left: 2, right: 10, top: 6, bottom: 6),
+                            constraints: const BoxConstraints(
+                                minWidth: 40, minHeight: 46),
+                          )
+                        else
+                          const SizedBox(width: 6),
+                      ],
+                    ),
+                  ),
                 ),
-                if (_voice.isRecording)
-                  _micControl(context)
-                else if (_hasText)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 2),
-                    child: IconButton.filled(
-                      tooltip: 'Send',
-                      style: IconButton.styleFrom(
-                        backgroundColor: accent,
-                        minimumSize: const Size(42, 42),
+                const SizedBox(width: 8),
+                // Separate round circular button: Send when typing, Mic when empty
+                if (_hasText)
+                  GestureDetector(
+                    onTap: _send,
+                    child: Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.14),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                      onPressed: _send,
+                      child: const Icon(
+                        Icons.send_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   )
-                else ...[
-                  _roundIcon(
-                    context,
-                    tooltip: 'Camera',
-                    icon: Icons.camera_alt_rounded,
-                    color: AppTheme.textSecondary(context),
-                    onTap: _openCamera,
-                  ),
+                else
                   _micControl(context),
-                ],
               ],
             ),
           ),
-          if (_hasText && !_voice.isRecording && !_voice.isPreviewing)
-            _buildToolbar(context),
         ],
-      ),
+      ],
     );
 
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    Widget result;
-    if (glass) {
-      result = ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: bar,
-        ),
-      );
-    } else {
-      result = bar;
-    }
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomPadding),
-      child: result,
-    );
-  }
-
-  Widget _roundIcon(
-    BuildContext context, {
-    required String tooltip,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-    double iconSize = 24,
-  }) {
-    return IconButton(
-      tooltip: tooltip,
-      icon: Icon(icon, color: color, size: iconSize),
-      onPressed: onTap,
-      splashRadius: 20,
-      padding: const EdgeInsets.all(8),
-    );
-  }
-
-  Widget _buildToolbar(BuildContext context) {
-    final dim = AppTheme.textSecondary(context).withValues(alpha: 0.35);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 0, 12, 4),
-      child: Row(
-        children: [
-          _ToolbarChip(
-              label: 'Undo',
-              enabled: _undoHistory.value.canUndo,
-              onTap: _undoHistory.undo),
-          _ToolbarChip(
-              label: 'Redo',
-              enabled: _undoHistory.value.canRedo,
-              onTap: _undoHistory.redo),
-          _ToolbarChip(label: 'Paste', enabled: true, onTap: _paste),
-          _ToolbarChip(label: 'Mention', enabled: true, onTap: _insertMention),
-          const Spacer(),
-          Text(
-            '${_text.length}',
-            style: GoogleFonts.inter(
-              color: _text.length > 4000 ? AppTheme.errorRed : dim,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
+    return TextFieldTapRegion(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottomPadding),
+        child: bar,
       ),
-    );
-  }
-}
-
-class _ToolbarChip extends StatelessWidget {
-  final String label;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  const _ToolbarChip({required this.label, required this.enabled, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final base = AppTheme.textSecondary(context);
-    return TextButton(
-      onPressed: enabled ? onTap : null,
-      style: TextButton.styleFrom(
-        foregroundColor: enabled ? base : base.withValues(alpha: 0.35),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        minimumSize: const Size(0, 30),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      child: Text(label,
-          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
     );
   }
 }

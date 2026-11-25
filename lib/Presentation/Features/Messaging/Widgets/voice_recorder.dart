@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import 'package:intelli_attend_faculty/Presentation/Features/Messaging/Widgets/chat_theme.dart';
 import 'package:intelli_attend_faculty/Theme/app_theme.dart';
 
 /// State machine for a WhatsApp-style voice note:
@@ -206,7 +207,10 @@ class VoiceRecorderController extends ChangeNotifier {
     if (path != null) _onSend(path, durationMs: durationMs);
   }
 
-  Future<void> _finishRecording() async {
+  /// Stops recording and opens the preview capsule (used by the stop square).
+  Future<void> stopToPreview() => _finishRecording(minDuration: const Duration(milliseconds: 250));
+
+  Future<void> _finishRecording({Duration? minDuration}) async {
     if (!_isRecording) return;
     await _stopRecorder();
     final path = _path;
@@ -215,7 +219,7 @@ class VoiceRecorderController extends ChangeNotifier {
       _reset();
       return;
     }
-    if (elapsed < _minDuration) {
+    if (elapsed < (minDuration ?? _minDuration)) {
       // Too short to be useful: silently discard.
       _deleteFile();
       _reset();
@@ -362,8 +366,134 @@ class VoiceRecorderController extends ChangeNotifier {
   }
 }
 
-/// Live recording bar: real amplitude wave, timer, pause/resume, lock and
-/// (when locked) delete + send. Shows the slide-to-cancel affordance.
+/// Shared Instagram-style voice note capsule UI:
+/// Top capsule pill: [Stop / Play-Pause] [Waveform Bars] [00:01]
+/// Bottom row: [Trash Delete]       (clean empty middle)       [Send Pill]
+class _VoiceCapsuleBar extends StatelessWidget {
+  final Color accent;
+  final Widget leadingControl;
+  final List<double> waveLevels;
+  final double progress;
+  final String timerText;
+  final VoidCallback onDelete;
+  final VoidCallback onSend;
+  final void Function(double fraction)? onSeek;
+
+  const _VoiceCapsuleBar({
+    required this.accent,
+    required this.leadingControl,
+    required this.waveLevels,
+    required this.progress,
+    required this.timerText,
+    required this.onDelete,
+    required this.onSend,
+    this.onSeek,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final trashColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Top rounded capsule pill
+          Container(
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Row(
+              children: [
+                leadingControl,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (ctx, constraints) {
+                      Widget wave = WaveformBars(
+                        levels: waveLevels,
+                        progress: progress,
+                        activeColor: Colors.white,
+                        inactiveColor: Colors.white.withValues(alpha: 0.35),
+                        height: 24,
+                      );
+                      if (onSeek != null && constraints.maxWidth > 0) {
+                        wave = GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTapUp: (d) => onSeek!(
+                              (d.localPosition.dx / constraints.maxWidth)
+                                  .clamp(0.0, 1.0)),
+                          onHorizontalDragUpdate: (d) => onSeek!(
+                              (d.localPosition.dx / constraints.maxWidth)
+                                  .clamp(0.0, 1.0)),
+                          child: wave,
+                        );
+                      }
+                      return wave;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  timerText,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // Bottom controls: Trash (left) ... Empty middle ... Send pill (right)
+          Row(
+            children: [
+              IconButton(
+                tooltip: 'Delete',
+                onPressed: onDelete,
+                icon: Icon(
+                  Icons.delete_outline_rounded,
+                  color: trashColor,
+                  size: 25,
+                ),
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: onSend,
+                child: Container(
+                  width: 64,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(
+                    Icons.send_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Live recording bar matching the reference capsule pill + trash/send row.
 class VoiceRecordingBar extends StatelessWidget {
   final VoiceRecorderController controller;
 
@@ -371,141 +501,42 @@ class VoiceRecordingBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = ChatThemeScope.accentOf(context);
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
-        final cancel = controller.slideCancel;
-        final tint = cancel
-            ? AppTheme.errorRed
-            : AppTheme.primary(context);
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: double.infinity,
-          color: tint.withValues(alpha: 0.12),
-          padding: const EdgeInsets.fromLTRB(14, 10, 8, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    controller.isPaused
-                        ? Icons.fiber_manual_record_rounded
-                        : Icons.graphic_eq_rounded,
-                    size: 16,
-                    color: cancel ? AppTheme.errorRed : AppTheme.primary(context),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: WaveformBars(
-                      levels: controller.wave,
-                      progress: 1,
-                      activeColor: tint,
-                      height: 26,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    controller.timerText,
-                    style: GoogleFonts.inter(
-                        color: AppTheme.text(context),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        fontFeatures: const [FontFeature.tabularFigures()]),
-                  ),
-                  _barIcon(
-                    context,
-                    tooltip: controller.isPaused ? 'Resume' : 'Pause',
-                    icon: controller.isPaused
-                        ? Icons.play_arrow_rounded
-                        : Icons.pause_rounded,
-                    color: AppTheme.textSecondary(context),
-                    onTap: controller.togglePause,
-                  ),
-                  _barIcon(
-                    context,
-                    tooltip: controller.isLocked ? 'Unlock' : 'Lock recording',
-                    icon: controller.isLocked
-                        ? Icons.lock_rounded
-                        : Icons.lock_open_rounded,
-                    color: controller.isLocked
-                        ? AppTheme.primary(context)
-                        : AppTheme.textSecondary(context),
-                    onTap: controller.toggleLock,
-                  ),
-                  if (controller.isLocked) ...[
-                    _barIcon(
-                      context,
-                      tooltip: 'Delete',
-                      icon: Icons.delete_outline_rounded,
-                      color: AppTheme.errorRed,
-                      onTap: controller.cancelRecording,
-                    ),
-                    _barSend(context),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 6),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 150),
-                child: Text(
-                  controller.isLocked
-                      ? 'Recording locked · pause, delete or send when ready'
-                      : cancel
-                          ? 'Release to cancel recording'
-                          : 'Hold to talk · slide left to cancel',
-                  key: ValueKey('${controller.isLocked}-$cancel'),
-                  style: GoogleFonts.inter(
-                    color: cancel
-                        ? AppTheme.errorRed
-                        : AppTheme.textSecondary(context),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+        return _VoiceCapsuleBar(
+          accent: controller.slideCancel ? AppTheme.errorRed : accent,
+          leadingControl: GestureDetector(
+            onTap: controller.stopToPreview,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: Center(
+                child: Container(
+                  width: 17,
+                  height: 17,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
+          waveLevels: controller.wave,
+          progress: 1.0,
+          timerText: controller.timerText,
+          onDelete: controller.cancelRecording,
+          onSend: controller.sendRecording,
         );
       },
     );
   }
-
-  Widget _barIcon(BuildContext context,
-      {required String tooltip,
-      required IconData icon,
-      required Color color,
-      required VoidCallback onTap}) {
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: onTap,
-      icon: Icon(icon, color: color, size: 20),
-      visualDensity: VisualDensity.compact,
-      splashRadius: 18,
-      padding: const EdgeInsets.all(6),
-      constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-    );
-  }
-
-  Widget _barSend(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: IconButton.filled(
-        tooltip: 'Send',
-        onPressed: controller.sendRecording,
-        style: IconButton.styleFrom(
-          backgroundColor: AppTheme.primary(context),
-          minimumSize: const Size(34, 34),
-        ),
-        icon: const Icon(Icons.send_rounded, color: Colors.white, size: 17),
-      ),
-    );
-  }
 }
 
-/// Pre-send preview: playback with real position, seekable wave, delete and
-/// send.
+/// Pre-send preview: playback with real position, seekable wave, delete and send.
 class VoicePreviewBar extends StatelessWidget {
   final VoiceRecorderController controller;
 
@@ -513,113 +544,48 @@ class VoicePreviewBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = ChatThemeScope.accentOf(context);
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
-        return Container(
-          width: double.infinity,
-          color: AppTheme.primary(context).withValues(alpha: 0.10),
-          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: controller.togglePreviewPlayback,
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: AppTheme.primary(context),
-                  child: Icon(
-                    controller.isPlayingPreview
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
+        return _VoiceCapsuleBar(
+          accent: accent,
+          leadingControl: GestureDetector(
+            onTap: controller.togglePreviewPlayback,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: Icon(
+                controller.isPlayingPreview
+                    ? Icons.pause_rounded
+                    : Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 25,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: GestureDetector(
-                  onTapUp: (d) =>
-                      controller.seekPreview(_fraction(context, d.localPosition.dx)),
-                  onHorizontalDragUpdate: (d) =>
-                      controller.seekPreview(_fraction(context, d.localPosition.dx)),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      WaveformBars(
-                        levels: controller.wave,
-                        progress: controller.previewProgress,
-                        activeColor: AppTheme.primary(context),
-                        height: 24,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            controller.previewPositionText,
-                            style: GoogleFonts.inter(
-                                color: AppTheme.text(context),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures()
-                                ]),
-                          ),
-                          Text(
-                            controller.previewDurationText,
-                            style: GoogleFonts.inter(
-                                color: AppTheme.textSecondary(context),
-                                fontSize: 11,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures()
-                                ]),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              IconButton(
-                tooltip: 'Delete',
-                onPressed: controller.deletePreview,
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: AppTheme.errorRed, size: 22),
-                visualDensity: VisualDensity.compact,
-              ),
-              IconButton.filled(
-                tooltip: 'Send',
-                onPressed: controller.sendPreview,
-                style: IconButton.styleFrom(
-                  backgroundColor: AppTheme.primary(context),
-                  minimumSize: const Size(40, 40),
-                ),
-                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-              ),
-            ],
+            ),
           ),
+          waveLevels: controller.wave,
+          progress: controller.previewProgress,
+          timerText: controller.isPlayingPreview
+              ? controller.previewPositionText
+              : controller.previewDurationText,
+          onDelete: controller.deletePreview,
+          onSend: controller.sendPreview,
+          onSeek: controller.seekPreview,
         );
       },
     );
   }
-
-  double _fraction(BuildContext context, double dx) {
-    final width = MediaQuery.sizeOf(context).width - 12 - 8 - 40 - 12 - 40;
-    if (width <= 0) return 0;
-    return (dx / width).clamp(0.0, 1.0);
-  }
 }
 
 /// Animated waveform bars driven by real amplitude levels (recording) or by
-/// playback progress (preview). Bars are stretched a bit for a lively look.
+/// playback progress (preview).
 class WaveformBars extends StatelessWidget {
   final List<double> levels;
   final double progress;
   final Color activeColor;
+  final Color? inactiveColor;
   final double height;
 
   const WaveformBars({
@@ -627,12 +593,14 @@ class WaveformBars extends StatelessWidget {
     required this.levels,
     required this.progress,
     required this.activeColor,
+    this.inactiveColor,
     this.height = 24,
   });
 
   @override
   Widget build(BuildContext context) {
-    final dimColor = AppTheme.textSecondary(context).withValues(alpha: 0.25);
+    final dimColor =
+        inactiveColor ?? AppTheme.textSecondary(context).withValues(alpha: 0.25);
     return SizedBox(
       height: height,
       child: Row(
@@ -644,7 +612,7 @@ class WaveformBars extends StatelessWidget {
               duration: const Duration(milliseconds: 70),
               curve: Curves.easeOut,
               width: 3,
-              height: 5 + (levels[i] * (height - 7)).clamp(0.0, height - 7),
+              height: 4 + (levels[i] * (height - 6)).clamp(0.0, height - 6),
               decoration: BoxDecoration(
                 color: (i / levels.length) <= progress
                     ? activeColor

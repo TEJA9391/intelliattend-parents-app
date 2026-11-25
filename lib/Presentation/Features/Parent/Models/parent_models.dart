@@ -720,6 +720,7 @@ class ParentNotificationMessage {
   final String? actionRoute;
   bool isRead;
   bool isArchived;
+  bool isStarred;
 
   ParentNotificationMessage({
     required this.id,
@@ -739,6 +740,7 @@ class ParentNotificationMessage {
     this.actionRoute,
     this.isRead = false,
     this.isArchived = false,
+    this.isStarred = false,
   });
 
   ParentNotificationMessage copyWith({
@@ -759,6 +761,7 @@ class ParentNotificationMessage {
     String? actionRoute,
     bool? isRead,
     bool? isArchived,
+    bool? isStarred,
   }) {
     return ParentNotificationMessage(
       id: id ?? this.id,
@@ -778,6 +781,7 @@ class ParentNotificationMessage {
       actionRoute: actionRoute ?? this.actionRoute,
       isRead: isRead ?? this.isRead,
       isArchived: isArchived ?? this.isArchived,
+      isStarred: isStarred ?? this.isStarred,
     );
   }
 

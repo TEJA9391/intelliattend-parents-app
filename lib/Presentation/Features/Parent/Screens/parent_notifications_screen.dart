@@ -518,14 +518,21 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
           // Child Filter Pills (Aarav / Ananya / All Wards)
           _buildChildFilterBar(context, isDark, controller.children),
 
-          // Notifications List
+          // Notifications List (flat rows with 1px divider, matching Faculty Chat)
           Expanded(
             child: filtered.isEmpty
                 ? _buildEmptyState(context, isDark)
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     physics: const BouncingScrollPhysics(),
                     itemCount: filtered.length,
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      indent: 74,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : const Color(0xFFF1F5F9),
+                    ),
                     itemBuilder: (context, index) {
                       final notif = filtered[index];
                       return _buildNotificationCard(context, isDark, notif, controller);
@@ -667,11 +674,7 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
       key: Key(notif.id),
       direction: DismissDirection.endToStart,
       background: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        decoration: BoxDecoration(
-          color: _showArchivedOnly ? const Color(0xFF3B82F6) : const Color(0xFF2DD4BF),
-          borderRadius: BorderRadius.circular(16),
-        ),
+        color: _showArchivedOnly ? const Color(0xFF3B82F6) : const Color(0xFF2DD4BF),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         child: Row(
@@ -716,187 +719,182 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
           );
         }
       },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppTheme.card(context),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppTheme.border(context),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onLongPress: () {
-              _showNotificationOptions(context, isDark, notif, controller);
-            },
-            onTap: () {
-              HapticFeedback.selectionClick();
-              if (!notif.isRead) {
-                controller.markNotificationAsRead(notif.id);
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ChangeNotifierProvider.value(
-                    value: controller,
-                    child: ParentNotificationDetailScreen(
-                      notification: notif,
-                      controller: controller,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onLongPress: () {
+            _showNotificationOptions(context, isDark, notif, controller);
+          },
+          onTap: () {
+            HapticFeedback.selectionClick();
+            if (!notif.isRead) {
+              controller.markNotificationAsRead(notif.id);
+            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ChangeNotifierProvider.value(
+                  value: controller,
+                  child: ParentNotificationDetailScreen(
+                    notification: notif,
+                    controller: controller,
+                  ),
+                ),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Circular initial avatar (matching Faculty Chat row)
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: badgeBg,
+                  child: Text(
+                    initial,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: badgeFg,
                     ),
                   ),
                 ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Circular initial avatar (matching reference image)
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: badgeBg,
-                    child: Text(
-                      initial,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: badgeFg,
-                      ),
-                    ),
-                  ),
 
-                  const SizedBox(width: 14),
+                const SizedBox(width: 14),
 
-                  // Content Column: Sender + Time/Dot, Title + Star, Snippet
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Row 1: Sender Name & Timestamp + Unread Dot
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                notif.senderName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: notif.isRead
-                                      ? AppTheme.textSecondary(context)
-                                      : AppTheme.text(context),
-                                  fontWeight: notif.isRead
-                                      ? FontWeight.w500
-                                      : FontWeight.w800,
-                                  fontSize: 14.5,
-                                ),
+                // Content Column: Sender + Time/Dot, Title + Star, Snippet
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Row 1: Sender Name & Timestamp + Unread Dot
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notif.senderName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: notif.isRead
+                                    ? AppTheme.textSecondary(context)
+                                    : AppTheme.text(context),
+                                fontWeight: notif.isRead
+                                    ? FontWeight.w500
+                                    : FontWeight.w800,
+                                fontSize: 14.5,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _formatTimestamp(notif.timestamp),
-                                  style: TextStyle(
-                                    color: notif.isRead
-                                        ? (isDark
-                                            ? Colors.white54
-                                            : const Color(0xFF64748B))
-                                        : const Color(0xFF2DD4BF),
-                                    fontSize: 11.5,
-                                    fontWeight: notif.isRead
-                                        ? FontWeight.normal
-                                        : FontWeight.bold,
-                                  ),
-                                ),
-                                if (!notif.isRead) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF2DD4BF),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 3),
-
-                        // Row 2: Subject / Title & Star icon
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                notif.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: notif.isRead
-                                      ? AppTheme.textSecondary(context)
-                                      : AppTheme.text(context),
-                                  fontWeight: notif.isRead
-                                      ? FontWeight.w500
-                                      : FontWeight.w800,
-                                  fontSize: 13.5,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.star_border_rounded,
-                              size: 19,
-                              color: isDark
-                                  ? Colors.white24
-                                  : const Color(0xFFCBD5E1),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 3),
-
-                        // Row 3: Snippet / Message preview (1 line)
-                        Text(
-                          snippet,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: notif.isRead
-                                ? (isDark
-                                    ? Colors.white54
-                                    : const Color(0xFF94A3B8))
-                                : (isDark
-                                    ? Colors.white70
-                                    : const Color(0xFF475569)),
-                            fontWeight: notif.isRead
-                                ? FontWeight.normal
-                                : FontWeight.w500,
-                            fontSize: 12.5,
-                            height: 1.35,
                           ),
+                          const SizedBox(width: 8),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _formatTimestamp(notif.timestamp),
+                                style: TextStyle(
+                                  color: notif.isRead
+                                      ? (isDark
+                                          ? Colors.white54
+                                          : const Color(0xFF64748B))
+                                      : const Color(0xFF2DD4BF),
+                                  fontSize: 11.5,
+                                  fontWeight: notif.isRead
+                                      ? FontWeight.normal
+                                      : FontWeight.bold,
+                                ),
+                              ),
+                              if (!notif.isRead) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF2DD4BF),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 3),
+
+                      // Row 2: Subject / Title & Interactive Star icon
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notif.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: notif.isRead
+                                    ? AppTheme.textSecondary(context)
+                                    : AppTheme.text(context),
+                                fontWeight: notif.isRead
+                                    ? FontWeight.w500
+                                    : FontWeight.w800,
+                                fontSize: 13.5,
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              controller.toggleNotificationStar(notif.id);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                  left: 10, top: 2, bottom: 2),
+                              child: Icon(
+                                notif.isStarred
+                                    ? Icons.star_rounded
+                                    : Icons.star_border_rounded,
+                                size: 20,
+                                color: notif.isStarred
+                                    ? const Color(0xFFF59E0B)
+                                    : (isDark
+                                        ? Colors.white24
+                                        : const Color(0xFFCBD5E1)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 3),
+
+                      // Row 3: Snippet / Message preview (1 line)
+                      Text(
+                        snippet,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: notif.isRead
+                              ? (isDark
+                                  ? Colors.white54
+                                  : const Color(0xFF94A3B8))
+                              : (isDark
+                                  ? Colors.white70
+                                  : const Color(0xFF475569)),
+                          fontWeight: notif.isRead
+                              ? FontWeight.normal
+                              : FontWeight.w500,
+                          fontSize: 12.5,
+                          height: 1.35,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

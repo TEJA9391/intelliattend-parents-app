@@ -172,7 +172,7 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
           },
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: AppTheme.surface(context),
               borderRadius: BorderRadius.circular(16),
@@ -180,14 +180,22 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
             ),
             child: Row(
               children: [
-                Icon(categories[index]["icon"] as IconData, color: AppTheme.primary(context), size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  categories[index]["name"] as String,
-                  style: TextStyle(
-                    color: AppTheme.text(context),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                Icon(
+                  categories[index]["icon"] as IconData,
+                  color: AppTheme.primary(context),
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    categories[index]["name"] as String,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppTheme.text(context),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13.5,
+                    ),
                   ),
                 ),
               ],

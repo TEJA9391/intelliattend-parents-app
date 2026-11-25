@@ -159,7 +159,7 @@ class _StudentAcademicCardState extends State<StudentAcademicCard> {
                                 : Icons.school_rounded,
                             size: 13.5,
                             color: _isBackFlipped
-                                ? AppTheme.textSecondary(context)
+                                ? const Color(0xFFEF4444)
                                 : const Color(0xFF2DD4BF),
                           ),
                           const SizedBox(width: 5),
@@ -171,7 +171,7 @@ class _StudentAcademicCardState extends State<StudentAcademicCard> {
                               fontSize: 11.5,
                               fontWeight: FontWeight.bold,
                               color: _isBackFlipped
-                                  ? AppTheme.text(context)
+                                  ? const Color(0xFFEF4444)
                                   : const Color(0xFF2DD4BF),
                             ),
                           ),
@@ -216,12 +216,12 @@ class _StudentAcademicCardState extends State<StudentAcademicCard> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Left Student Avatar (Tappable to view full view & change photo)
+          // Left Student Avatar (Tappable to view full-screen image only)
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
               HapticFeedback.lightImpact();
-              StudentPhotoViewerDialog.show(context, child);
+              StudentPhotoViewerDialog.showFullScreenImageOnly(context, child);
             },
             child: Stack(
               clipBehavior: Clip.none,
@@ -349,43 +349,33 @@ class _StudentAcademicCardState extends State<StudentAcademicCard> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppTheme.surface(context),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.border(context), width: 1),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildEmergencyLine(
-                  context,
-                  label: 'Blood Group',
-                  value: bloodGroupDisplay,
-                ),
-                Divider(height: 1, thickness: 0.7, color: AppTheme.border(context)),
-                _buildEmergencyLine(
-                  context,
-                  label: 'Bus No',
-                  value: busDisplay,
-                  onTap: () => widget.onRfidBusTap?.call(),
-                ),
-                Divider(height: 1, thickness: 0.7, color: AppTheme.border(context)),
-                _buildEmergencyLine(
-                  context,
-                  label: 'Emergency No',
-                  value: '080-2345 6700',
-                  onTap: () => _callPhone('+918023456700'),
-                ),
-                Divider(height: 1, thickness: 0.7, color: AppTheme.border(context)),
-                _buildEmergencyLine(
-                  context,
-                  label: 'Medical',
-                  value: 'No Allergies',
-                ),
-              ],
-            ),
+          // Info rows — no lines, no border container
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildEmergencyLine(
+                context,
+                label: 'Blood Group',
+                value: bloodGroupDisplay,
+              ),
+              _buildEmergencyLine(
+                context,
+                label: 'Bus No',
+                value: busDisplay,
+                onTap: () => widget.onRfidBusTap?.call(),
+              ),
+              _buildEmergencyLine(
+                context,
+                label: 'Emergency No',
+                value: '080-2345 6700',
+                onTap: () => _callPhone('+918023456700'),
+              ),
+              _buildEmergencyLine(
+                context,
+                label: 'Medical',
+                value: 'No Allergies',
+              ),
+            ],
           ),
 
           // Call Class Teacher button (neutral monochrome)
@@ -430,59 +420,71 @@ class _StudentAcademicCardState extends State<StudentAcademicCard> {
     );
   }
 
-  /// Plain, color-free key : value row for Emergency & Safety ID
+  /// Plain key : value row for Emergency & Safety ID
+  /// Only the action icon on the right (Bus / Phone) is tappable, not the text.
   Widget _buildEmergencyLine(
     BuildContext context, {
     required String label,
     required String value,
     VoidCallback? onTap,
   }) {
-    final row = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5.5),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 112,
-            child: Text(
-              '$label :',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textSecondary(context),
+    final isButton = onTap != null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      child: SizedBox(
+        height: 24,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 112,
+              child: Text(
+                '$label :',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.textSecondary(context),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.text(context),
+            Expanded(
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.text(context),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
+            if (isButton)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    onTap();
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      label.contains('Bus')
+                          ? Icons.directions_bus_rounded
+                          : Icons.phone_rounded,
+                      size: 16,
+                      color: const Color(0xFF2DD4BF),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
-
-    if (onTap != null) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            onTap();
-          },
-          child: row,
-        ),
-      );
-    }
-    return row;
   }
 
   /// Live GPS badge: Active & pulsing ONLY when student has boarded bus via RFID

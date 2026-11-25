@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../Data/Models/Messaging/messaging_models.dart';
 import '../../../../Data/Services/message_cache_service.dart';
+import '../../../../Services/persistence_service.dart';
 import '../../../../Theme/app_theme.dart';
 import '../../Messaging/chat_screen.dart';
 import '../../Messaging/Widgets/peer_avatar.dart';
@@ -24,9 +25,23 @@ class ParentChatTab extends StatefulWidget {
 }
 
 class _ParentChatTabState extends State<ParentChatTab> {
+  static const String _readChatsPrefKey = 'parent_read_chats_v1';
+
   final TextEditingController _searchController = TextEditingController();
   int _filterCategoryIndex =
       0; // 0: All, 1: Class Teacher, 2: Principal, 3: Timetable Faculty
+  late Set<String> _readConversationIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _readConversationIds = PersistenceService.isInitialized
+        ? Set<String>.from(
+            PersistenceService.prefs.getStringList(_readChatsPrefKey) ??
+                const <String>[],
+          )
+        : <String>{};
+  }
 
   @override
   void dispose() {
@@ -659,19 +674,37 @@ class _ParentChatTabState extends State<ParentChatTab> {
 
   void _openChat(BuildContext context, ChatConversation conversation) async {
     HapticFeedback.selectionClick();
+
+    // Clear unread highlight immediately once the newly arrived chat is opened
+    final readConversation = conversation.resetUnread();
+    if (!_readConversationIds.contains(conversation.id)) {
+      setState(() {
+        _readConversationIds.add(conversation.id);
+      });
+      if (PersistenceService.isInitialized) {
+        await PersistenceService.prefs.setStringList(
+          _readChatsPrefKey,
+          _readConversationIds.toList(),
+        );
+      }
+    }
+
     // Cache conversation so ChatScreen can load history
-    await MessageCacheService.instance.upsertConversation(conversation);
+    await MessageCacheService.instance.upsertConversation(readConversation);
 
     // Save full conversation history so ChatScreen is not empty
-    final messages = _getMockMessagesFor(conversation);
+    final messages = _getMockMessagesFor(readConversation);
     await MessageCacheService.instance.saveMessages(conversation.id, messages);
 
     if (!context.mounted) return;
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ChatScreen(conversation: conversation),
+        builder: (_) => ChatScreen(conversation: readConversation),
       ),
     );
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _confirmCall(BuildContext context, StudentContact peer) {
@@ -820,7 +853,9 @@ class _ParentChatTabState extends State<ParentChatTab> {
     final parentController = context.watch<ParentController>();
     final child = parentController.activeChild;
 
-    final allConversations = _getSchoolFacultyConversations(child);
+    final allConversations = _getSchoolFacultyConversations(child)
+        .map((c) => _readConversationIds.contains(c.id) ? c.resetUnread() : c)
+        .toList();
     final query = _searchController.text.trim().toLowerCase();
 
     // Category filter
@@ -1043,6 +1078,7 @@ class _ParentChatTabState extends State<ParentChatTab> {
                     itemBuilder: (ctx, idx) {
                       final c = filtered[idx];
                       final peer = c.peer;
+                      final isUnread = c.unreadCount > 0;
                       final isClassTeacher =
                           peer.department?.contains('Class Teacher') ?? false;
                       final isPrincipal =
@@ -1072,7 +1108,7 @@ class _ParentChatTabState extends State<ParentChatTab> {
                         onTap: () => _openChat(context, c),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 11),
+                              horizontal: 16, vertical: 12),
                           child: Row(
                             children: [
                               // Avatar with live presence indicator
@@ -1105,133 +1141,77 @@ class _ParentChatTabState extends State<ParentChatTab> {
                               ),
                               const SizedBox(width: 14),
 
-                              // Chat Info
+                              // Chat Info: Name + Role Chip & Last Message only
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Row 1: Teacher Name + Role Chip + Time
                                     Row(
                                       children: [
-                                        Expanded(
-                                          child: Row(
-                                            children: [
-                                              Flexible(
-                                                child: Text(
-                                                  peer.name,
-                                                  style: TextStyle(
-                                                    color: AppTheme.text(ctx),
-                                                    fontSize: 14.5,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: roleBadgeBg,
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                ),
-                                                child: Text(
-                                                  roleBadgeText,
-                                                  style: TextStyle(
-                                                    color: roleBadgeFg,
-                                                    fontSize: 9.5,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Text(
-                                          _formatChatTime(c.lastMessageTime),
-                                          style: TextStyle(
-                                            color: c.unreadCount > 0
-                                                ? const Color(0xFF2DD4BF)
-                                                : AppTheme.textSecondary(ctx),
-                                            fontSize: 11,
-                                            fontWeight: c.unreadCount > 0
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 3),
-
-                                    // Row 2: Subject & Period (From Timetable)
-                                    Text(
-                                      peer.department ?? '',
-                                      style: TextStyle(
-                                        color: isDark
-                                            ? const Color(0xFF94A3B8)
-                                            : const Color(0xFF64748B),
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-
-                                    // Row 3: Last Message Preview + Unread Count
-                                    Row(
-                                      children: [
-                                        Expanded(
+                                        Flexible(
                                           child: Text(
-                                            c.lastMessage ??
-                                                'Tap to start conversation',
+                                            peer.name,
                                             style: TextStyle(
-                                              color: c.unreadCount > 0
+                                              color: isUnread
                                                   ? AppTheme.text(ctx)
-                                                  : AppTheme.textSecondary(ctx),
-                                              fontSize: 12.5,
-                                              fontWeight: c.unreadCount > 0
-                                                  ? FontWeight.w600
-                                                  : FontWeight.normal,
+                                                  : AppTheme.text(ctx)
+                                                      .withValues(alpha: 0.78),
+                                              fontSize: 15,
+                                              fontWeight: isUnread
+                                                  ? FontWeight.w800
+                                                  : FontWeight.w600,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        if (c.unreadCount > 0) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.all(5),
-                                            decoration: const BoxDecoration(
-                                              color: Color(0xFF2DD4BF),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Text(
-                                              '${c.unreadCount}',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: roleBadgeBg,
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            roleBadgeText,
+                                            style: TextStyle(
+                                              color: roleBadgeFg,
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                        ],
+                                        ),
                                       ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      c.lastMessage ??
+                                          'Tap to start conversation',
+                                      style: TextStyle(
+                                        color: isUnread
+                                            ? (isDark
+                                                ? const Color(0xFF2DD4BF)
+                                                : const Color(0xFF0F766E))
+                                            : AppTheme.textSecondary(ctx),
+                                        fontSize: 13,
+                                        fontWeight: isUnread
+                                            ? FontWeight.w700
+                                            : FontWeight.normal,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                 ),
                               ),
 
-                              // Quick Phone Call Icon with Confirmation
+                              // Right side: Call button only
                               IconButton(
                                 icon: Icon(
                                   Icons.phone_outlined,
-                                  size: 19,
+                                  size: 20,
                                   color: AppTheme.textSecondary(ctx),
                                 ),
                                 tooltip: 'Call Faculty',
@@ -1284,27 +1264,5 @@ class _ParentChatTabState extends State<ParentChatTab> {
         ),
       ),
     );
-  }
-
-  String _formatChatTime(DateTime? time) {
-    if (time == null) return '';
-    final now = DateTime.now();
-    final diff = now.difference(time);
-    if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}m';
-    } else if (diff.inHours < 24) {
-      final hour =
-          time.hour > 12 ? time.hour - 12 : (time.hour == 0 ? 12 : time.hour);
-      final ampm = time.hour >= 12 ? 'PM' : 'AM';
-      final min = time.minute.toString().padLeft(2, '0');
-      return '$hour:$min $ampm';
-    } else if (diff.inDays == 1) {
-      return 'Yesterday';
-    } else if (diff.inDays < 7) {
-      const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      return weekdays[time.weekday - 1];
-    } else {
-      return '${time.day}/${time.month}';
-    }
   }
 }

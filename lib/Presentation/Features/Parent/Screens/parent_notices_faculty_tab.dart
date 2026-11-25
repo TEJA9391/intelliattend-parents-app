@@ -259,93 +259,55 @@ class _ParentNoticesFacultyTabState extends State<ParentNoticesFacultyTab> {
     final dateFormat = DateFormat('dd MMM yyyy');
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: notice.isUrgent
-              ? const Color(0xFFEF4444).withValues(alpha: 0.4)
+              ? const Color(0xFFEF4444).withValues(alpha: 0.45)
               : AppTheme.border(context),
-          width: notice.isUrgent ? 1.4 : 1.0,
+          width: notice.isUrgent ? 1.2 : 1.0,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(14),
           onTap: () => _openNoticeDetail(context, notice),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header: Category tag, Urgent badge, Date
+                // Compact metadata row: Category, Urgent tag, Date
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: notice.categoryColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        notice.category.name.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: notice.categoryColor,
-                        ),
+                    Text(
+                      notice.category.name.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                        color: notice.categoryColor,
                       ),
                     ),
                     if (notice.isUrgent) ...[
                       const SizedBox(width: 8),
-                      Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.warning_amber_rounded,
-                              size: 11,
-                              color: Color(0xFFEF4444),
-                            ),
-                            SizedBox(width: 3),
-                            Text(
-                              'IMPORTANT',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFEF4444),
-                              ),
-                            ),
-                          ],
+                      const Text(
+                        '• IMPORTANT',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFEF4444),
                         ),
                       ),
                     ],
                     const Spacer(),
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: 11,
-                      color: AppTheme.textSecondary(context),
-                    ),
-                    const SizedBox(width: 4),
                     Text(
                       dateFormat.format(notice.publishedDate),
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.textSecondary(context),
                       ),
@@ -353,77 +315,31 @@ class _ParentNoticesFacultyTabState extends State<ParentNoticesFacultyTab> {
                   ],
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
 
-                // Title
-                Text(
-                  notice.title,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    height: 1.3,
-                    color: AppTheme.text(context),
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Summary / Content
-                Text(
-                  notice.fullContent,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    height: 1.5,
-                    color: AppTheme.textSecondary(context),
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                // Footer: Published by authority & open full screen arrow
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface(context).withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.school_rounded,
-                        size: 15,
-                        color: Color(0xFF2DD4BF),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          notice.publishedBy,
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF2DD4BF),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Read More',
+                // Main Subject Headline + open arrow
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        notice.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF2DD4BF),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          height: 1.3,
+                          color: AppTheme.text(context),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 10,
-                        color: Color(0xFF2DD4BF),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: AppTheme.textSecondary(context),
+                    ),
+                  ],
                 ),
               ],
             ),

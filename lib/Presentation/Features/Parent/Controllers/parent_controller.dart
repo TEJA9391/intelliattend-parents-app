@@ -522,6 +522,14 @@ class ParentController extends ChangeNotifier {
     }
   }
 
+  void toggleNotificationStar(String id) {
+    final idx = _notifications.indexWhere((n) => n.id == id);
+    if (idx != -1) {
+      _notifications[idx].isStarred = !_notifications[idx].isStarred;
+      notifyListeners();
+    }
+  }
+
   void archiveNotification(String id) {
     final idx = _notifications.indexWhere((n) => n.id == id);
     if (idx != -1) {

@@ -495,35 +495,6 @@ class ParentProfileTab extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 36),
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'INTELLIATTEND PARENT PORTAL',
-                        style: TextStyle(
-                          color: AppTheme.textSecondary(context)
-                              .withValues(alpha: 0.5),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '© 2026 IntelliAttend Technologies.\nAll Rights Reserved.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppTheme.textSecondary(context)
-                              .withValues(alpha: 0.35),
-                          fontSize: 10,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
                 const SizedBox(height: 24),
               ],
             ),
@@ -727,8 +698,8 @@ class _DailyAttendanceAlertsTile extends StatefulWidget {
       _DailyAttendanceAlertsTileState();
 }
 
-class _DailyAttendanceAlertsTileState
-    extends State<_DailyAttendanceAlertsTile> with WidgetsBindingObserver {
+class _DailyAttendanceAlertsTileState extends State<_DailyAttendanceAlertsTile>
+    with WidgetsBindingObserver {
   final PermissionService _permissionService = PermissionService();
   bool _alertsEnabled = true;
   bool _notifGranted = false;
@@ -756,7 +727,8 @@ class _DailyAttendanceAlertsTileState
   Future<void> _loadState() async {
     final prefs = await SharedPreferences.getInstance();
     final notifGranted = await Permission.notification.isGranted;
-    final prefEnabled = prefs.getBool('daily_attendance_alerts_enabled') ?? true;
+    final prefEnabled =
+        prefs.getBool('daily_attendance_alerts_enabled') ?? true;
 
     if (mounted) {
       setState(() {

@@ -1,10 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intelli_attend_faculty/Theme/app_theme.dart';
 
-/// Circular avatar showing the peer's profile image (when available) or their
-/// initials, with an optional online ring and presence dot.
+/// Circular avatar showing the peer's profile image (when available) or a clean
+/// person avatar icon, with an optional online ring and presence dot.
 class PeerAvatar extends StatelessWidget {
   final String name;
   final String? imageUrl;
@@ -43,15 +42,6 @@ class PeerAvatar extends StatelessWidget {
       hash = (hash * 31 + c) & 0x7fffffff;
     }
     return palette[hash % palette.length];
-  }
-
-  String get _initials {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) {
-      return parts.first.characters.first.toUpperCase();
-    }
-    return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
   }
 
   @override
@@ -93,13 +83,10 @@ class PeerAvatar extends StatelessWidget {
         color: bg,
       ),
       child: Center(
-        child: Text(
-          _initials,
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: radius * 0.72,
-          ),
+        child: Icon(
+          Icons.person_rounded,
+          color: Colors.white,
+          size: radius * 1.18,
         ),
       ),
     );

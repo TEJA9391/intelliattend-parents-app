@@ -55,6 +55,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   Timer? _draftTimer;
+  Timer? _seenTickTimer;
+  double _timeRevealDx = 0.0;
   bool _isMuted = false;
   int? _wallpaper;
   bool _darkChat = false;
@@ -108,6 +110,9 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     _scrollController.addListener(_onScroll);
+    _seenTickTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _controller.markRead();
       _scrollToBottom(animate: false);
@@ -118,6 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     NotificationService.setActiveConversation(null);
     _draftTimer?.cancel();
+    _seenTickTimer?.cancel();
     _controller.markRead();
     _inputController.dispose();
     _scrollController.dispose();
@@ -1117,32 +1123,89 @@ class _ChatScreenState extends State<ChatScreen> {
     final rows = _buildRows(controller.messages);
     final reversed = rows.reversed.toList();
 
-    return ListView.builder(
-      controller: _scrollController,
-      reverse: true,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      itemCount: reversed.length,
-      itemBuilder: (context, index) {
-        final row = reversed[index];
-        if (row.isSeparator) {
-          return _DateSeparator(date: row.date!);
+    String? latestMsgId;
+    for (var i = controller.messages.length - 1; i >= 0; i--) {
+      if (!controller.messages[i].isSystem) {
+        latestMsgId = controller.messages[i].id;
+        break;
+      }
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragUpdate: (d) {
+        final next = (_timeRevealDx + d.delta.dx).clamp(-72.0, 0.0).toDouble();
+        if (next != _timeRevealDx) {
+          setState(() => _timeRevealDx = next);
         }
-        final message = row.message!;
-        final bubble = _buildBubble(context, controller, message, row);
-        Widget entry;
-        if (message.id == _scrollTargetId) {
-          final key = _messageKeys.putIfAbsent(message.id, GlobalKey.new);
-          entry = KeyedSubtree(key: key, child: bubble);
-        } else {
-          entry = bubble;
-        }
-        if (message.id == _highlightId) {
-          entry = _MessageHighlight(child: entry);
-        }
-        return RepaintBoundary(
-          child: _MessageAppear(key: ValueKey(message.id), child: entry),
-        );
       },
+      onHorizontalDragEnd: (_) {
+        if (_timeRevealDx != 0) setState(() => _timeRevealDx = 0);
+      },
+      onHorizontalDragCancel: () {
+        if (_timeRevealDx != 0) setState(() => _timeRevealDx = 0);
+      },
+      child: ListView.builder(
+        controller: _scrollController,
+        reverse: true,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        itemCount: reversed.length,
+        itemBuilder: (context, index) {
+          final row = reversed[index];
+          final message = row.message;
+          final isLatest = message.id == latestMsgId;
+          final bubble = _buildBubble(
+            context,
+            controller,
+            message,
+            row,
+            isLatest: isLatest,
+          );
+          Widget entry;
+          if (message.id == _scrollTargetId) {
+            final key = _messageKeys.putIfAbsent(message.id, GlobalKey.new);
+            entry = KeyedSubtree(key: key, child: bubble);
+          } else {
+            entry = bubble;
+          }
+          if (message.id == _highlightId) {
+            entry = _MessageHighlight(child: entry);
+          }
+          return RepaintBoundary(
+            child: _MessageAppear(
+              key: ValueKey(message.id),
+              child: Stack(
+                alignment: Alignment.centerRight,
+                children: [
+                  if (_timeRevealDx < -4)
+                    Positioned(
+                      right: 12,
+                      child: Opacity(
+                        opacity: (_timeRevealDx.abs() / 56.0).clamp(0.0, 1.0),
+                        child: Text(
+                          ChatTimeFormat.bubbleTime(message.timestamp),
+                          style: GoogleFonts.inter(
+                            color: AppTheme.textSecondary(context),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  AnimatedContainer(
+                    duration: _timeRevealDx == 0
+                        ? const Duration(milliseconds: 200)
+                        : Duration.zero,
+                    curve: Curves.easeOutCubic,
+                    transform: Matrix4.translationValues(_timeRevealDx, 0, 0),
+                    child: entry,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -1302,62 +1365,95 @@ class _ChatScreenState extends State<ChatScreen> {
 
   List<_ChatRow> _buildRows(List<ChatMessage> messages) {
     final rows = <_ChatRow>[];
-    DateTime? lastDay;
     for (var i = 0; i < messages.length; i++) {
       final m = messages[i];
-      if (!m.isSystem &&
-          (lastDay == null || !ChatTimeFormat.isSameDay(m.timestamp, lastDay))) {
-        rows.add(_ChatRow.separator(m.timestamp));
-        lastDay = m.timestamp;
-      }
-      final prev = i > 0 ? messages[i - 1] : null;
       final next = i < messages.length - 1 ? messages[i + 1] : null;
-      final groupStart = prev == null ||
-          prev.senderId != m.senderId ||
-          prev.isSystem ||
-          !ChatTimeFormat.isSameDay(prev.timestamp, m.timestamp);
       final groupEnd = next == null ||
           next.senderId != m.senderId ||
           next.isSystem ||
           !ChatTimeFormat.isSameDay(next.timestamp, m.timestamp);
-      rows.add(_ChatRow.message(m, showTail: groupEnd, showAvatar: groupStart && !m.isSystem));
+      rows.add(_ChatRow.message(m, showTail: groupEnd, showAvatar: groupEnd && !m.isSystem));
     }
     return rows;
   }
 
-  Widget _buildBubble(BuildContext context, ChatScreenController controller,
-      ChatMessage message, _ChatRow row) {
+  String _formatSeenStatus(ChatMessage message) {
+    final seenAt = message.readAt ?? message.timestamp;
+    final diff = DateTime.now().difference(seenAt);
+    if (diff.inSeconds < 60) {
+      return 'Seen just now';
+    } else if (diff.inMinutes < 60) {
+      return 'Seen ${diff.inMinutes}m ago';
+    } else if (diff.inHours < 24) {
+      return 'Seen ${diff.inHours}h ago';
+    }
+    return 'Seen ${ChatTimeFormat.bubbleTime(seenAt)}';
+  }
+
+  Widget _buildBubble(
+    BuildContext context,
+    ChatScreenController controller,
+    ChatMessage message,
+    _ChatRow row, {
+    bool isLatest = false,
+  }) {
     final isOutgoing = message.direction == MessageDirection.outgoing;
+    final showSeen = isLatest && isOutgoing && message.status == MessageStatus.read;
     final bubble = GestureDetector(
       onTap: () {
         if (controller.selectionMode) {
           controller.toggleSelect(message.id);
         }
       },
-      child: MessageBubble(
-        message: message,
-        isOutgoing: isOutgoing,
-        showTail: row.showTail,
-        showAvatar: row.showAvatar,
-        onLongPress: () => _onMessageLongPress(context, controller, message),
-        onTap: controller.selectionMode ? () => controller.toggleSelect(message.id) : null,
-        onDoubleTap: controller.selectionMode ? null : () => controller.toggleReaction(message, '👍'),
-        onCancelUpload: message.isUploading
-            ? () => controller.cancelUpload(message.id)
-            : null,
-        onRetry: !message.isUploading && message.status == MessageStatus.failed
-            ? () => controller.retryMessage(message)
-            : null,
-        onReact: controller.selectionMode
-            ? null
-            : (emoji) => controller.toggleReaction(message, emoji),
-        onReactMore: controller.selectionMode ? null : () => _showReactionPicker(context, message),
-        onReplyTap: message.replyTo == null
-            ? null
-            : () => _jumpToMessage(message.replyTo!.messageId),
-        onThreadTap: message.threadCount > 0
-            ? () => _openThread(context, controller, message)
-            : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment:
+            isOutgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          MessageBubble(
+            message: message,
+            isOutgoing: isOutgoing,
+            showTail: row.showTail,
+            showAvatar: row.showAvatar,
+            onLongPress: () => _onMessageLongPress(context, controller, message),
+            onTap: controller.selectionMode
+                ? () => controller.toggleSelect(message.id)
+                : null,
+            onDoubleTap: controller.selectionMode
+                ? null
+                : () => controller.toggleReaction(message, '👍'),
+            onCancelUpload: message.isUploading
+                ? () => controller.cancelUpload(message.id)
+                : null,
+            onRetry: !message.isUploading && message.status == MessageStatus.failed
+                ? () => controller.retryMessage(message)
+                : null,
+            onReact: controller.selectionMode
+                ? null
+                : (emoji) => controller.toggleReaction(message, emoji),
+            onReactMore: controller.selectionMode
+                ? null
+                : () => _showReactionPicker(context, message),
+            onReplyTap: message.replyTo == null
+                ? null
+                : () => _jumpToMessage(message.replyTo!.messageId),
+            onThreadTap: message.threadCount > 0
+                ? () => _openThread(context, controller, message)
+                : null,
+          ),
+          if (showSeen)
+            Padding(
+              padding: const EdgeInsets.only(right: 16, top: 2, bottom: 4),
+              child: Text(
+                _formatSeenStatus(message),
+                style: GoogleFonts.inter(
+                  color: AppTheme.textSecondary(context),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+        ],
       ),
     );
     return _SwipeReply(
@@ -1673,44 +1769,14 @@ class _ChatScreenState extends State<ChatScreen> {
 // ── Row helpers ─────────────────────────────────────────────────────────
 
 class _ChatRow {
-  final DateTime? date;
-  final ChatMessage? message;
+  final ChatMessage message;
   final bool showTail;
   final bool showAvatar;
 
-  const _ChatRow._({this.date, this.message, this.showTail = false, this.showAvatar = false});
-
-  factory _ChatRow.separator(DateTime date) => _ChatRow._(date: date);
+  const _ChatRow._({required this.message, this.showTail = false, this.showAvatar = false});
 
   factory _ChatRow.message(ChatMessage message, {required bool showTail, required bool showAvatar}) =>
       _ChatRow._(message: message, showTail: showTail, showAvatar: showAvatar);
-
-  bool get isSeparator => date != null;
-}
-
-class _DateSeparator extends StatelessWidget {
-  final DateTime date;
-
-  const _DateSeparator({required this.date});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          ChatTimeFormat.dateSeparator(date),
-          style: GoogleFonts.inter(
-              color: AppTheme.textSecondary(context), fontSize: 11, fontWeight: FontWeight.w700),
-        ),
-      ),
-    );
-  }
 }
 
 /// Pulses a primary-tinted glow behind a message when jumping to it.
@@ -1947,7 +2013,7 @@ class _SwipeReplyState extends State<_SwipeReply> {
   Widget build(BuildContext context) {
     final accent = ChatThemeScope.accentOf(context);
     return GestureDetector(
-      behavior: HitTestBehavior.translucent,
+      behavior: HitTestBehavior.deferToChild,
       onHorizontalDragUpdate: _onUpdate,
       onHorizontalDragEnd: _onEnd,
       onHorizontalDragCancel: () => setState(() => _dx = 0),

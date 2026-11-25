@@ -9,7 +9,6 @@ import 'package:intelli_attend_faculty/Data/Repositories/Messaging/messaging_rep
 import 'package:intelli_attend_faculty/Data/Services/message_cache_service.dart';
 import 'package:intelli_attend_faculty/Theme/app_theme.dart';
 import 'package:intelli_attend_faculty/Services/chat_realtime_service.dart';
-import 'package:intelli_attend_faculty/Presentation/Features/Messaging/call_screen.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/Widgets/chat_appearance_sheet.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/Widgets/chat_time_format.dart';
 import 'package:intelli_attend_faculty/Presentation/Features/Messaging/Widgets/peer_avatar.dart';
@@ -69,13 +68,6 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                 ),
                 onPressed: () => Navigator.pop(context),
               ),
-              actions: [
-                IconButton(
-                  tooltip: 'Voice call',
-                  icon: Icon(Icons.call_rounded, color: AppTheme.text(context), size: 22),
-                  onPressed: () => _startCall(context, CallType.audio),
-                ),
-              ],
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
                   decoration: BoxDecoration(
@@ -309,6 +301,7 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
     String selectedReason = reasons.first;
     final detailsController = TextEditingController();
     bool forwardToPrincipal = true;
+    String? validationError;
 
     showModalBottomSheet(
       context: context,
@@ -547,18 +540,30 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                             color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                              color: validationError != null
+                                  ? const Color(0xFFEF4444)
+                                  : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                              width: validationError != null ? 1.4 : 1.0,
                             ),
                           ),
                           child: TextField(
                             controller: detailsController,
                             maxLines: 4,
                             maxLength: 500,
+                            onChanged: (_) {
+                              if (validationError != null) {
+                                setModalState(() => validationError = null);
+                              }
+                            },
                             style: TextStyle(fontSize: 13, color: AppTheme.text(context)),
                             decoration: InputDecoration(
                               hintText: 'Please describe the incident, dates, and specific concerns clearly for the Principal\'s review...',
                               hintStyle: TextStyle(fontSize: 12, color: AppTheme.textSecondary(context)),
+                              filled: false,
+                              fillColor: Colors.transparent,
                               border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
                               contentPadding: const EdgeInsets.all(12),
                             ),
                           ),
@@ -606,6 +611,41 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                           ],
                         ),
 
+                        if (validationError != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFFEF4444).withValues(alpha: 0.45),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.error_outline_rounded,
+                                  color: Color(0xFFEF4444),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    validationError!,
+                                    style: const TextStyle(
+                                      color: Color(0xFFEF4444),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
                         const SizedBox(height: 20),
 
                         // Action Buttons
@@ -630,12 +670,11 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                                 onPressed: () {
                                   final details = detailsController.text.trim();
                                   if (details.length < 5) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Please enter at least a brief description of the incident.'),
-                                        backgroundColor: Color(0xFFEF4444),
-                                      ),
-                                    );
+                                    HapticService.light();
+                                    setModalState(() {
+                                      validationError =
+                                          'Please enter at least a brief description of the incident.';
+                                    });
                                     return;
                                   }
 
@@ -724,20 +763,6 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  void _startCall(BuildContext context, CallType type) {
-    HapticService.medium();
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CallScreen(
-          peer: _peer,
-          type: type,
-          direction: CallDirection.outgoing,
-          repository: _repository,
         ),
       ),
     );

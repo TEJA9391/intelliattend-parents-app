@@ -265,28 +265,6 @@ class AboutAppPage extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 36),
-
-            // Footer
-            Text(
-              "INTELLIATTEND PARENT PORTAL",
-              style: TextStyle(
-                color: AppTheme.textSecondary(context).withValues(alpha: 0.5),
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              "© 2026 IntelliAttend Technologies.\nAll Rights Reserved.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppTheme.textSecondary(context).withValues(alpha: 0.35),
-                fontSize: 10,
-                height: 1.5,
-              ),
-            ),
             const SizedBox(height: 24),
           ],
         ),

@@ -132,6 +132,65 @@ class StudentPhotoViewerDialog extends StatefulWidget {
     this.controller,
   });
 
+  /// Full-screen, view-only image viewer (no edit controls) used on Home's Enrolled Student card.
+  static Future<void> showFullScreenImageOnly(
+    BuildContext context,
+    ChildProfile child,
+  ) {
+    HapticFeedback.lightImpact();
+    final avatarUrl = child.avatarUrl.trim().isNotEmpty
+        ? child.avatarUrl
+        : (child.id == 'child_2' ? 'preset:ananya' : 'preset:aarav');
+
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (ctx) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white, size: 20),
+              onPressed: () => Navigator.of(ctx).pop(),
+            ),
+            title: Text(
+              child.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            centerTitle: true,
+          ),
+          body: SafeArea(
+            child: Center(
+              child: InteractiveViewer(
+                panEnabled: true,
+                minScale: 1.0,
+                maxScale: 4.0,
+                child: SizedBox(
+                  width: MediaQuery.sizeOf(ctx).width,
+                  height: MediaQuery.sizeOf(ctx).width,
+                  child: buildSmartAvatarImage(
+                    avatarUrl,
+                    width: MediaQuery.sizeOf(ctx).width,
+                    height: MediaQuery.sizeOf(ctx).width,
+                    fit: BoxFit.contain,
+                    iconSize: 80,
+                    fallbackPreset:
+                        child.id == 'child_2' ? 'preset:ananya' : 'preset:aarav',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   static Future<void> show(
     BuildContext context,
     ChildProfile child, {
@@ -315,7 +374,7 @@ class _StudentPhotoViewerDialogState extends State<StudentPhotoViewerDialog> {
                         child: const Icon(
                           Icons.badge_rounded,
                           size: 16,
-                          color: const Color(0xFF2DD4BF),
+                          color: Color(0xFF2DD4BF),
                         ),
                       ),
                       const SizedBox(width: 8),
